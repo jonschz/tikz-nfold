@@ -1,0 +1,419 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{a4wide}
+
+\usepackage{tikz}
+
+\usepgflibrary{bezieroffset}
+%% for syntax highlighting:
+%\makeatletter
+%\input{pgflibrarybezieroffset.code.tex}
+%\makeatother
+
+\makeatletter
+\newcommand{\drawsplit}[5]{
+\pgf@splitbezier{#1}{#2}{#3}{#4}{#5}
+\begin{pgfpicture}
+  \pgfpathmoveto{#2}
+  \pgfpathcurveto{#3}{#4}{#5}
+  \pgfusepathqstroke
+  \color{red}
+  \pgfpathmoveto{\pgf@splitbezier@i@i}
+  \pgfpathcurveto{\pgf@splitbezier@i@ii}{\pgf@splitbezier@i@iii}{\pgf@splitbezier@i@iv}
+  \pgfusepathqstroke
+  \color{blue}
+  \pgfpathmoveto{\pgf@splitbezier@ii@i}
+  \pgfpathcurveto{\pgf@splitbezier@ii@ii}{\pgf@splitbezier@ii@iii}{\pgf@splitbezier@ii@iv}
+  \pgfusepathqstroke
+\end{pgfpicture}\\
+First curve:\\
+\meaning\pgf@splitbezier@i@i\\
+\meaning\pgf@splitbezier@i@ii\\
+\meaning\pgf@splitbezier@i@iii\\
+\meaning\pgf@splitbezier@i@iv
+
+Second curve:\\
+\meaning\pgf@splitbezier@ii@i\\
+\meaning\pgf@splitbezier@ii@ii\\
+\meaning\pgf@splitbezier@ii@iii\\
+\meaning\pgf@splitbezier@ii@iv
+}
+
+% Count the number of subdivisions
+\newcount\numcalls
+\newcommand{\callbackmovecount}[5]{%
+  \global\advance\numcalls by 1\relax%
+  \pgf@nfold@callback@move{#1}{#2}{#3}{#4}{#5}%
+}
+
+% override \pgfwarning to capture the emitted warnings
+\let\errormsg\pgfutil@empty
+\renewcommand{\pgfwarning}[1]{
+  \ifx\errormsg\pgfutil@empty
+    \xdef\errormsg{#1}
+  \else
+    \xdef\errormsg{\errormsg; #1}
+  \fi
+}
+
+\newcommand{\testcase}[7]{
+  \begingroup
+  \vspace{1\baselineskip}
+  \subsubsection{#7}
+  \vspace{.5\baselineskip}
+  \begin{minipage}{.45\linewidth}
+    \let\errormsg\pgfutil@empty
+    \begin{pgfpicture}
+      % offsetting
+      \pgf@offset@bezier@segment{#1}{#2}{#3}{#4}{\offsetdistance}
+      % original curve
+      \color{green!30!black}
+      \pgfpathmoveto{#1}
+      \pgfpathcurveto{#2}{#3}{#4}
+      \pgfusepathqstroke
+      % offset curve
+      \color{violet}
+      \pgftransformreset\pgfpathmoveto{\pgf@bezier@offset@i}
+      \pgfpathcurveto{\pgf@bezier@offset@ii}{\pgf@bezier@offset@iii}{\pgf@bezier@offset@iv}
+      \pgfusepathqstroke
+      % control points
+      \color{green}
+      \pgfsetstrokeopacity{.7} % add some transparency so we can see overlapping points better
+      \pgftransformreset\pgftransformshift{#1}
+      \pgfnode{circle}{center}{}{name}{\pgfusepath{stroke}}
+      \pgftransformreset\pgftransformshift{#2}
+      \pgfnode{circle}{center}{}{name}{\pgfusepath{stroke}}
+      \pgftransformreset\pgftransformshift{#3}
+      \pgfnode{circle}{center}{}{name}{\pgfusepath{stroke}}
+      \pgftransformreset\pgftransformshift{#4}
+      \pgfnode{circle}{center}{}{name}{\pgfusepath{stroke}}
+      \color{red}
+      \pgftransformreset\pgftransformshift{\pgf@bezier@offset@i}
+      \pgfnode{circle}{center}{}{name}{\pgfusepath{stroke}}
+      \pgftransformreset\pgftransformshift{\pgf@bezier@offset@ii}
+      \pgfnode{circle}{center}{}{name}{\pgfusepath{stroke}}
+      \pgftransformreset\pgftransformshift{\pgf@bezier@offset@iii}
+      \pgfnode{circle}{center}{}{name}{\pgfusepath{stroke}}
+      \pgftransformreset\pgftransformshift{\pgf@bezier@offset@iv}
+      \pgfnode{circle}{center}{}{name}{\pgfusepath{stroke}}
+    \end{pgfpicture} \\
+    \raggedright
+    Expec.: #5 \\
+    Actual: \ifx\errormsg\pgfutil@empty No error\else\errormsg\fi
+  \end{minipage}
+  \hskip.05\linewidth
+  \begin{minipage}{.45\linewidth}
+  \let\errormsg\pgfutil@empty
+  \begin{pgfpicture}
+    \pgfpathmoveto{#1}
+    \pgfpathcurveto{#2}{#3}{#4}
+    \pgfusepathqstroke
+    \makeatletter
+    \numcalls=0
+    \pgfoffsetcurvecallback{#1}{#2}{#3}{#4}{\offsetdistance}{\callbackmovecount}
+    \color{blue}
+    \pgfusepathqstroke
+    \color{red}
+    \pgfoffsetcurve{#1}{#2}{#3}{#4}{-\offsetdistance}
+    \pgfusepathqstroke
+    \makeatother
+  \end{pgfpicture}  \\
+    \raggedright
+    Number of segments: \the\numcalls\\
+    Expec.: #6 \\
+    Actual: \ifx\errormsg\pgfutil@empty No error\else\errormsg\fi
+  \end{minipage}\\
+  \endgroup
+}
+\makeatother
+
+% Document settings
+\newlength{\offsetdistance}
+\setlength{\offsetdistance}{10pt}
+\raggedright
+\AddToHook{cmd/section/before}{\clearpage}
+
+
+\begin{document}
+
+\section{Splitting a Bezier curve (de Casteljau's algorithm)}
+
+\drawsplit{.3}%
+  {\pgfpoint{0pt}{0pt}}%
+  {\pgfpoint{10pt}{100pt}}%
+  {\pgfpoint{80pt}{100pt}}%
+  {\pgfpoint{100pt}{0pt}}%
+
+% TODO current test
+\drawsplit{.5}%
+  {\pgfpoint{0pt}{0pt}}%
+  {\pgfpoint{70pt}{70pt}}%
+  {\pgfpoint{100pt}{50pt}}%
+  {\pgfpoint{100pt}{50pt}}
+
+
+\section{Subdividing and offsetting with log output}
+
+% debug output instead of drawing the points
+\newcommand{\outputsegment}[5]{
+  output: \meaning#1\par\meaning#2\par \meaning#3\par\meaning#4\par
+  at start: \ifnum#5=0 yes\else no\fi\par
+}
+
+% Original
+\pgfoffsetcurvecallback{\pgfpoint{0pt}{0pt}}{\pgfpoint{10pt}{100pt}}{\pgfpoint{80pt}{100pt}}{\pgfpoint{100pt}{0pt}}{10pt}{\outputsegment}
+
+% For debugging: Get the subdivision output
+%\vspace{1cm}
+%\pgfoffsetcurvecallback%
+%{\pgfpoint{0pt}{0pt}}%
+%{\pgfpoint{0pt}{0pt}}
+%{\pgfpoint{70pt}{70pt}}
+%{\pgfpoint{100pt}{50pt}}
+%{0pt}% set 0pt to get only the subdivision output
+%{\outputsegment}
+
+
+\section{Unit tests for offsetting}
+
+\begin{itemize}
+  \item Left picture: offset without subdivision; green: original, purple/red: offset
+  \item Right picture: offset with subdivision
+\end{itemize}
+
+
+\subsection{Non-simple curves}
+
+\testcase{\pgfpoint{0pt}{-1cm}}
+{\pgfpoint{1cm}{2cm}}
+{\pgfpoint{2cm}{-1cm}}
+{\pgfpoint{3cm}{1cm}}
+{No error}
+{No error; $\geq 2$ segments}
+{Non-simple curve (fails multiple checks)}
+
+\testcase{\pgfpoint{0pt}{-1cm}}
+{\pgfpoint{.4cm}{.6cm}}
+{\pgfpoint{3cm}{0cm}}
+{\pgfpoint{3cm}{1cm}}
+{No error}
+{No error; $\geq 2$ segments}
+{Non-simple curve (fails first check only)}
+
+\testcase{\pgfpoint{0pt}{50pt}}
+{\pgfpoint{30pt}{100pt}}
+{\pgfpoint{70pt}{100pt}}
+{\pgfpoint{100pt}{50pt}}
+{No error}
+{No error; $\geq 2$ segments}
+{Non-simple curve (fails second check only)}
+
+\testcase{\pgfpoint{0pt}{-10pt}}
+{\pgfpoint{0pt}{3pt}}
+{\pgfpoint{13pt}{10pt}}
+{\pgfpoint{30pt}{10pt}}
+{No error}
+{No error; $\geq 2$ segments}
+{Non-simple curve (fails second check only)}
+
+\testcase{\pgfpoint{0pt}{0pt}}
+{\pgfpoint{10pt}{100pt}}
+{\pgfpoint{80pt}{100pt}}
+{\pgfpoint{100pt}{0pt}}
+{cosine clamped ($\times 2$)}
+{No error; $\geq 2$ segments}
+{Non-simple curve (fails second check only)}
+
+\testcase{\pgfpoint{-5pt}{0pt}}%
+{\pgfpoint{50pt}{20pt}}%
+{\pgfpoint{-51pt}{19pt}}%
+{\pgfpoint{5pt}{0pt}}%
+{Visual glitches; no error}
+{No error; $\geq 2$ segments}
+{Non-simple curve (fails third check only)}
+
+\testcase{\pgfpoint{0cm}{0cm}}%
+{\pgfpoint{2cm}{-1cm}}%
+{\pgfpoint{1cm}{-1cm}}%
+{\pgfpoint{3cm}{0cm}}%
+{No error; visual glitch (compare to right)}
+{No error; $\geq 2$ segments}
+{Non-simple curve (fails third check only)}
+
+
+\subsection{Various tests}
+
+\testcase{\pgfpoint{20pt}{0pt}}
+{\pgfpoint{-20pt}{100pt}}
+{\pgfpoint{50pt}{100pt}}
+{\pgfpoint{100pt}{50pt}}
+{cosine clamped ($\times 2$)}
+{No error}
+{Extremum in x and y}
+
+\testcase{\pgfpoint{0pt}{0pt}}
+{\pgfpoint{20pt}{0pt}}
+{\pgfpoint{60pt}{0pt}}
+{\pgfpoint{100pt}{0pt}}
+{No error}
+{No error}
+{Exactly straight, no degeneracy}
+
+\testcase{\pgfpoint{0pt}{0pt}}
+{\pgfpoint{20pt}{0.01pt}}
+{\pgfpoint{40pt}{-0.01pt}}
+{\pgfpoint{60pt}{0pt}}
+{No error}
+{No error; 2 segments}
+{Almost straight, with inflection point}
+
+\testcase{\pgfpoint{0pt}{0pt}}
+{\pgfpoint{10pt}{70pt}}
+{\pgfpoint{90pt}{70pt}}
+{\pgfpoint{100pt}{50pt}}
+{cosine clamped}
+{No error}
+{Origin in $A_1$ unless subdivided}
+
+\testcase{\pgfpoint{0pt}{-10pt}}
+{\pgfpoint{5pt}{0pt}}
+{\pgfpoint{11pt}{7pt}}
+{\pgfpoint{30pt}{10pt}}
+{No error}
+{No error}
+{Simple curve}
+
+\testcase{\pgfpoint{0.797cm}{-0.37cm}}
+{\pgfpoint{0.402cm}{1.65cm}}
+{\pgfpoint{1.144cm}{-0.84cm}}
+{\pgfpoint{1.802cm}{-0.06cm}}
+{cosine clamped}
+{Recursion limit reached [...]}
+{Cusp (errors expected)}
+
+\testcase%
+{\pgfpoint{73.82813pt}{1.99695pt}}
+{\pgfpoint{74.60938pt}{1.54004pt}}
+{\pgfpoint{75.0pt}{1.05469pt}}
+{\pgfpoint{75.0pt}{0.5625pt}}
+{No error}
+{No error}
+{Short segment with big offset}
+
+\subsection{Degenerate curves}
+
+\testcase{\pgfpoint{0pt}{0pt}}%
+{\pgfpoint{0pt}{0pt}}
+{\pgfpoint{70pt}{60pt}}
+{\pgfpoint{100pt}{50pt}}
+{No error}
+{No error}
+{Degenerate $A_1=A_2$}
+
+\testcase{\pgfpoint{0pt}{0pt}}%
+{\pgfpoint{70pt}{65pt}}%
+{\pgfpoint{100pt}{50pt}}%
+{\pgfpoint{100pt}{50pt}}%
+{No error}%
+{No error}
+{Degenerate $A_3=A_4$}
+
+% The curvature near the start is very high, so I consider this test to be a pass;
+% this is one of the cases where this approach is not well suited
+\testcase{\pgfpoint{0pt}{0pt}}
+{\pgfpoint{70pt}{70pt}}
+{\pgfpoint{100pt}{49pt}}
+{\pgfpoint{100pt}{50pt}}
+{cosine clamped}
+{Offsetting a Bezier curve reached the recursion limit ...}
+{Almost degenerate $A_3\approx A_4$, errors expected}
+
+\testcase{\pgfpoint{0pt}{0pt}}
+{\pgfpoint{70pt}{65pt}}
+{\pgfpoint{70pt}{65pt}}
+{\pgfpoint{100pt}{50pt}}
+{No error}
+{No error; $\geq 2$ segments (fails 3rd simplicity check)}
+{Degenerate $A_2=A_3$}
+
+\testcase{\pgfpoint{50pt}{50pt}}%
+{\pgfpoint{50pt}{50pt}}
+{\pgfpoint{50pt}{50pt}}
+{\pgfpoint{100pt}{0pt}}
+{No error}
+{No error}
+{Double degenerate $A_1=A_2=A_3$}
+
+\testcase{\pgfpoint{50pt}{50pt}}
+{\pgfpoint{100pt}{0pt}}
+{\pgfpoint{100pt}{0pt}}
+{\pgfpoint{100pt}{0pt}}
+{No error}
+{No error}
+{Double degenerate $A_2=A_3=A_4$}
+
+\testcase{\pgfpoint{50pt}{50pt}}
+{\pgfpoint{50pt}{50pt}}
+{\pgfpoint{51pt}{49pt}}
+{\pgfpoint{100pt}{0pt}}
+{No error}
+{No error}
+{Almost double degenerate $A_1=A_2\approx A_3$}
+
+% I think throwing a warning here is desired behaviour,
+% as the curve is offset along the x-axis, which is rather arbitrary
+\testcase{\pgfpoint{50pt}{50pt}}
+{\pgfpoint{50pt}{50pt}}
+{\pgfpoint{50pt}{50pt}}
+{\pgfpoint{50pt}{50pt}}
+{first and last point are too close}
+{first and last point are too close [...]}
+{Triple degenerate $A_1=A_2=A_3=A_4$}
+
+
+\subsection{$A_1$ close to $A_4$}
+
+\testcase{\pgfpoint{0pt}{0pt}}%
+{\pgfpoint{90pt}{16pt}}%
+{\pgfpoint{90pt}{-14pt}}%
+{\pgfpoint{0pt}{0pt}}%
+{first and last point are too close [...]}
+{No error}
+{$A_1=A_4$}
+
+\testcase{\pgfpoint{0pt}{0pt}}%
+{\pgfpoint{25pt}{4pt}}%
+{\pgfpoint{25pt}{-3.5pt}}%
+{\pgfpoint{0pt}{-1.5pt}}%
+{Visual glitches; cosine clamped}
+{No error}
+{$A_1\approx A_4$}
+
+
+\subsection{Recursion limit}
+
+\testcase{\pgfpoint{0pt}{0pt}}%
+{\pgfpoint{100pt}{16pt}}%
+{\pgfpoint{100pt}{-14pt}}%
+{\pgfpoint{0pt}{0pt}}%
+{first and last point are too close [...]}
+{Recursion limit reached [...]}
+{Barely grazing the recursion limit}
+
+{
+\makeatletter
+\pgf@offset@max@recursion=5
+\testcase{\pgfpoint{0pt}{0pt}}%
+{\pgfpoint{100pt}{16pt}}%
+{\pgfpoint{100pt}{-14pt}}%
+{\pgfpoint{0pt}{0pt}}%
+{first and last point are too close [...]}
+{No error}
+{Error disappears with \string\pgf@offset@max@recursion = \the\pgf@offset@max@recursion}
+\makeatother
+}
+
+
+\end{document}

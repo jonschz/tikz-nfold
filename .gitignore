@@ -1,3 +1,7 @@
+## Generated test pdfs
+test-pgfbezieroffset.pdf
+test-tikznfold.pdf
+
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
