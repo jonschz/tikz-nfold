@@ -2,6 +2,9 @@
 test-pgfbezieroffset.pdf
 test-tikznfold.pdf
 
+## zipped files for CTAN - these should be published as releases
+tikz-nfold.tar.gz
+
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
