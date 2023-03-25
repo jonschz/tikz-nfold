@@ -14,7 +14,7 @@
 % The Current Maintainer of this work is Jonathan Schulz.
 %
 % This work consists of the files pgflibrarybezieroffset.code.tex, tikzlibrarynfold.code.tex,
-% tikz-nfold.sty, and tikz-nfold-doc.tex.
+% tikz-nfold.sty, tikz-nfold-doc.tex, and tikz-nfold-doc.pdf.
 
 \usetikzlibrary{decorations}
 \usetikzlibrary{arrows.meta}
@@ -149,7 +149,6 @@
 
 \def\pgf@nfold@make@join{
   % The code must be invariant under deltaphi -> deltaphi + 360, which can be verified experimentally
-  % TODO re-check for new bevel and round formulas
   \pgfmathsetmacro{\pgf@nfold@deltaphi}{\pgfdecoratedinputsegmentstartangle-\pgf@nfold@cached@endangle}
   % Offset the start and end of this segment
   \pgfpointadd{\pgf@nfold@cached@endpoint}{\pgfpointpolar{\pgf@nfold@cached@endangle+90}{\pgf@shiftdec@amount}}
@@ -187,9 +186,9 @@
         \fi
       \fi
     \fi
-    % Common for all joins: Connect to the starting point of the current segment
-    % TODO are there cases where this is a zero-length path which could lead to glitches?
-    % Could check if \insidepercentage < .99
+    % Common for all non-trivial joins: Connect to the starting point of the current segment.
+    % Note that this code is skipped by the global \ifdim if the start and end of the join coincide,
+    % so we never get a zero length segment here.
     \pgfpathlineto{\pgf@nfold@offset@end}
   \fi
 }

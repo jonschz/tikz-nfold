@@ -14,7 +14,7 @@
 % The Current Maintainer of this work is Jonathan Schulz.
 %
 % This work consists of the files pgflibrarybezieroffset.code.tex, tikzlibrarynfold.code.tex,
-% tikz-nfold.sty, and tikz-nfold-doc.tex.
+% tikz-nfold.sty, tikz-nfold-doc.tex, and tikz-nfold-doc.pdf.
 
 
 \documentclass[12pt,a4paper]{article}
@@ -36,7 +36,7 @@
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 
-\newcommand{\todo}[1]{{\color{red}\bfseries#1}}
+%\newcommand{\todo}[1]{{\color{red}\bfseries#1}}
 \newcommand{\tikzdouble}{\texttt{/tikz/double}}
 \newcommand{\nfold}{\texttt{nfold}}
 \newcommand{\tikznfold}{\texttt{/tikz/nfold}}
@@ -199,7 +199,7 @@ This package is far from perfect, and even if it were, there would still be some
   \item Some rare cases of curves are not offset correctly. The reasons for that are discussed below in \cref{subsec:subdivisionUsed}. Usually, slightly changing the control points or values of the curve will fix the problem.
   \item Closing paths (i.e.\ using \texttt{-- cycle}) is not yet supported (this feature is on the wish list).
   \item \nfold{} is significantly slower than \tikzdouble. Part of the reason is that the construction is far more complex, other reasons can be fixed in principle. Specifically, the use of the \texttt{decorations} library is rather inefficient for this purpose.
-  \item While I did my best trying to break \nfold{} with as many of TikZ' options as possible, there are most definitely some problematic options I have not tested. If you find any bugs, please report them at \todo{link}.
+  \item While I did my best trying to break \nfold{} with as many of TikZ' options as possible, there are most definitely some problematic options I have not tested. If you find any bugs, please report them \href{https://github.com/jonschz/tikz-nfold/issues/}{here}.
 \end{itemize}
 
 
