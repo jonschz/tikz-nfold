@@ -2,10 +2,6 @@
 test-pgfbezieroffset.pdf
 test-tikznfold.pdf
 
-## zipped files for CTAN - these should be published as releases
-tikz-nfold.tar.gz
-tikz-nfold.zip
-
 ## Build folder
 build/*
 !build/tikz-nfold
