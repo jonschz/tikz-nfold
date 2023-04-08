@@ -109,7 +109,7 @@
   % The protrusion amount must be lowered by a little bit for a rather complicated reason: The offset would be
   % dead on if the outermost offset line were centered on the _edge_ of the wide line, but we want to draw 
   % the outside line _fully inside_ the wide line. The factor of tan(deltaphi/4) can be derived, but is not obvious.
-  \pgfmathsetmacro{\bevelouterprotrusion}{\pgf@nfold@shortenforjoin - .5*\pgflinewidth*abs(tan(.25*\pgf@nfold@deltaphi))}
+  \pgfmathsetmacro{\bevelouterprotrusion}{\pgf@nfold@shortenstartjoin - .5*\pgflinewidth*abs(tan(.25*\pgf@nfold@deltaphi))}
   % The following applies to middle lines only: We compute by how much they need to be shortened so the distance
   % between the lines in the join is correct.
   \pgfmathsetmacro{\bevelshorten}{2*\insidepercentage*abs(tan(.25*\pgf@nfold@deltaphi))}
@@ -117,9 +117,9 @@
   \pgfmathparse{\bevelshorten < abs(sin(.5*\pgf@nfold@deltaphi))}
   \ifnum\pgfmathresult=1\relax
     \pgfmathsetmacro{\bevelextension}{\bevelouterprotrusion-\bevelshorten*\pgf@decoration@nfold@hwidth}
-    \pgfpointadd{\pgf@nfold@offset@start}{\pgfpointpolar{\pgf@nfold@cached@endangle}{\bevelextension}}
+    \pgfpointadd{\pgf@nfold@join@start}{\pgfpointpolar{\pgf@nfold@cached@endangle}{\bevelextension}}
     \pgfpathlineto{}
-    \pgfpointadd{\pgf@nfold@offset@end}{\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{-\bevelextension}}
+    \pgfpointadd{\pgf@nfold@join@end}{\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{-\bevelextension}}
     \pgfpathlineto{}
   \else
     \pgf@nfold@miterjoin
@@ -129,7 +129,7 @@
 \def\pgf@nfold@roundjoin{
   % The outer half of the lines get arcs, the others get miters
   \ifdim\insidepercentage pt<.5pt\relax
-    \pgfpointadd{\pgf@nfold@offset@start}{\pgfpointpolar{\pgf@nfold@cached@endangle}{\pgf@nfold@shortenforjoin}}
+    \pgfpointadd{\pgf@nfold@join@start}{\pgfpointpolar{\pgf@nfold@cached@endangle}{\pgf@nfold@shortenstartjoin}}
     \pgfpathlineto{}
     % Check if the angles are in the correct range; under some conditions we must add or subtract 360
     \pgfmathparse{\turnindicator*(\pgfdecoratedinputsegmentstartangle-\pgf@nfold@cached@endangle)}
@@ -150,12 +150,12 @@
 \def\pgf@nfold@make@join{
   % The code must be invariant under deltaphi -> deltaphi + 360, which can be verified experimentally
   \pgfmathsetmacro{\pgf@nfold@deltaphi}{\pgfdecoratedinputsegmentstartangle-\pgf@nfold@cached@endangle}
-  % Offset the start and end of this segment
+  % Offset the start and end of this join
   \pgfpointadd{\pgf@nfold@cached@endpoint}{\pgfpointpolar{\pgf@nfold@cached@endangle+90}{\pgf@shiftdec@amount}}
-  \pgfstorepoint\pgf@nfold@offset@start
+  \pgfstorepoint\pgf@nfold@join@start
   \pgfpointadd{\pgf@nfold@segment@start}{\pgfpointpolar{\pgfdecoratedinputsegmentstartangle+90}{\pgf@shiftdec@amount}}
-  \pgfstorepoint\pgf@nfold@offset@end
-  \pgfpointdiff{\pgf@nfold@offset@start}{\pgf@nfold@offset@end}
+  \pgfstorepoint\pgf@nfold@join@end
+  \pgfpointdiff{\pgf@nfold@join@start}{\pgf@nfold@join@end}
   % Check if the start of this segment is too close to the end of the previous segment.
   % In that case we don't insert a join segment, as it would look rather glitchy.
   % We use the Manhattan length for performance and to avoid 'dimension too large' errors.
@@ -189,7 +189,7 @@
     % Common for all non-trivial joins: Connect to the starting point of the current segment.
     % Note that this code is skipped by the global \ifdim if the start and end of the join coincide,
     % so we never get a zero length segment here.
-    \pgfpathlineto{\pgf@nfold@offset@end}
+    \pgfpathlineto{\pgf@nfold@join@end}
   \fi
 }
 
@@ -248,7 +248,7 @@
 \def\pgf@nfold@shift@handle@segment{%
   % In order to make space for the join, it may be necessary to shorten the current segment
   % at the start and/or the end. In here we store by how much the segment needs to be shortened.
-  \def\pgf@nfold@shortenforjoin{0pt}
+  \def\pgf@nfold@shortenstartjoin{0pt}
   % Make a join only if two adjacent segments are both visible
   \ifpgfsegmentvisible\pgfdecorationcurrentinputsegment
     % Step 1: Make space for the join at the start if needed
@@ -264,8 +264,8 @@
         % we go full backwards, don't relocate the start
         \pgfwarning{Angle too sharp in decoration 'nfold', expect visual errors}
       \else
-        \pgfmathsetlengthmacro{\pgf@nfold@shortenforjoin}{\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@xa))}
-        \pgfpointadd{\pgf@decorate@inputsegment@first}{\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{\pgf@nfold@shortenforjoin}}
+        \pgfmathsetlengthmacro{\pgf@nfold@shortenstartjoin}{\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@xa))}
+        \pgfpointadd{\pgf@decorate@inputsegment@first}{\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{\pgf@nfold@shortenstartjoin}}
         \pgfstorepoint\pgf@nfold@segment@start
       \fi
     \fi
@@ -280,8 +280,8 @@
       \ifdim\pgfmathresult pt<0.02pt\relax
         \pgfwarning{Angle too sharp in decoration 'nfold', expect visual errors}
       \else
-        \pgfmathparse{-\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@xa))}
-        \pgfpointadd{\pgf@decorate@inputsegment@last}{\pgfpointpolar{\pgfdecoratedinputsegmentendangle}{\pgfmathresult pt}}
+        \pgfmathsetlengthmacro{\pgf@nfold@shortenendjoin}{\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@xa))}
+        \pgfpointadd{\pgf@decorate@inputsegment@last}{\pgfpointpolar{\pgfdecoratedinputsegmentendangle}{-\pgf@nfold@shortenendjoin}}
         \pgfstorepoint\pgf@nfold@segment@end
       \fi
     \fi
