@@ -231,6 +231,15 @@ This package is far from perfect, and even if it were, there would still be some
 \end{tikzpicture}
 \end{tkzexample}
   This cannot be fixed without extensive use of the \texttt{intersections} library, hurting the performance, and the result might still not look great for orders $\geq 3$.
+  \item Very short curves with large angles at the ends result in a glitched output:
+\begin{tkzexample}[latex=3.5cm]
+\begin{tikzpicture}
+  \draw[black] (1, 0) -- (3,0) -- (2, 1.2) -- (4, .8);
+  \draw[blue, double distance=.5cm, nfold] (1, 0) -- (3,0)
+     to[relative, out=1, in=179] (2, 1.2) -- (4, .8);
+\end{tikzpicture}
+\end{tkzexample}
+  This issue has been fixed for straight lines in version \texttt{0.0.2}, but it is much harder to fix for curves.
   \item changing joins in \verb|\pgfsys@beginscope| without an accompanying \TeX{} group may cause inconsistent behaviour in the joins. For example,
 \begin{tkzexample}[latex=2cm]
 \makeatletter
@@ -259,6 +268,16 @@ to only import the base layer library. The following commands are provided:
   \item \verb|\pgfoffsetlinenomove|: This macro is analogous to \verb|\pgfoffsetcurvenomove|.
 \end{itemize}
 
+\section{Version history}
+
+\begin{itemize}
+  \item \textbf{0.0.1}: First public version
+  \item \textbf{0.0.2}: Bugfixes
+  \begin{itemize}
+    \item \texttt{dashed} no longer influences the arrow tip
+    \item Very short lines with large angles at both ends are now offset correctly
+  \end{itemize}
+\end{itemize}
 
 \appendix
 \newpage

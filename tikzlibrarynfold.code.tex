@@ -186,10 +186,21 @@
         \fi
       \fi
     \fi
-    % Common for all non-trivial joins: Connect to the starting point of the current segment.
-    % Note that this code is skipped by the global \ifdim if the start and end of the join coincide,
-    % so we never get a zero length segment here.
-    \pgfpathlineto{\pgf@nfold@join@end}
+    % All non-trivial joins connect to the end of the join, which is the starting point of the current segment.
+    % Note that this entire macro is skipped by if the start and end of the join coincide, so we never create a zero length segment here.
+    %
+    % There is one edge case here: If two subsequent joins are so close that \pgf@nfold@segment@end
+    % and \pgf@nfold@segment@start exchange places *and* we are on the outside of the join 
+    % (implying that we are on the inside of the next join), \pgf@nfold@join@end will be located behind the next join.
+    % In this case we instead connect to the offset of \pgf@nfold@segment@end (which comes *before* \pgf@nfold@segment@start).
+    \pgf@nfold@join@end% default point to connect to
+    \ifpgf@nfold@closejoinsedgecase%
+      \ifdim\insidepercentage pt<.5pt\relax%
+        \pgfpointadd{\pgf@nfold@segment@end}%
+        {\pgfpointpolar{\pgfdecoratedinputsegmentendangle+90}{\pgf@shiftdec@amount}}
+      \fi%
+    \fi
+    \pgfpathlineto{}
   \fi
 }
 
@@ -224,6 +235,8 @@
 \newdimen\pgf@nfold@cached@endangle
 % This stores whether the current segment should begin with a moveto to its offset
 \newif\ifpgf@nfold@continuesegment
+% This stores whether we are in some edge case of very close joins, see below for details
+\newif\ifpgf@nfold@closejoinsedgecase
 
 % some required computations for the current segment
 \def\pgf@nfold@shift@prepare@segment{%
@@ -249,9 +262,11 @@
   % In order to make space for the join, it may be necessary to shorten the current segment
   % at the start and/or the end. In here we store by how much the segment needs to be shortened.
   \def\pgf@nfold@shortenstartjoin{0pt}
+  \def\pgf@nfold@shortenendjoin{0pt}
+  \pgf@nfold@closejoinsedgecasefalse
   % Make a join only if two adjacent segments are both visible
   \ifpgfsegmentvisible\pgfdecorationcurrentinputsegment
-    % Step 1: Make space for the join at the start if needed
+    % Step 1.1: Make space for the join at the start if needed
     \ifx\pgfdecorationpreviousinputsegment\pgfdecorationinputsegmentmoveto\else
       \ifdefined\pgfdecorationpreviousinputsegment
         % As far as I am aware, the previous input segment is either moveto or undefined
@@ -269,7 +284,7 @@
         \pgfstorepoint\pgf@nfold@segment@start
       \fi
     \fi
-    % Step 2: Make space for the join at the end if needed
+    % Step 1.2: Make space for the join at the end if needed
     \ifpgfsegmentvisible\pgfdecorationnextinputsegmentobject
       % for reasons unknown to me,
       % \pgfdecoratedangletonextinputsegment has a "pt" but the others do not
@@ -284,50 +299,79 @@
         \pgfpointadd{\pgf@decorate@inputsegment@last}{\pgfpointpolar{\pgfdecoratedinputsegmentendangle}{-\pgf@nfold@shortenendjoin}}
         \pgfstorepoint\pgf@nfold@segment@end
       \fi
-    \fi
+      % Step 1.3: Detect an edge case
+      % This edge case appears whenever the current segment is such a short line that we would have to reduce its length
+      % to less than zero to make space for the joins. In such cases, the line is not drawn at all, and slight modifications
+      % must be made to the joins for a correct output (i.e. one join is immediately followed by the next without a segment in between).
+      %
+      % This edge case can appear for curves as well, but they are much harder to deal with.
+      \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentlineto
+        % No need to check for \pgfdecorationinputsegmentclosepath, as it should not be followed by any further segments
+        % Now: Check if the total amount of shortening is larger than the length of the segment
+        \pgfpointdiff{\pgf@decorate@inputsegment@first}{\pgf@decorate@inputsegment@last}
+        \pgfmathparse{\pgf@nfold@shortenstartjoin+\pgf@nfold@shortenendjoin > veclen(\pgf@x,\pgf@y)}
+        \ifnum\pgfmathresult=1\relax
+          \pgf@nfold@closejoinsedgecasetrue
+        \fi
+      \fi
+    \fi% end if next segment visible
     %
-    % Step 3: Draw the join at the start if applicable
+    % Step 2: Draw the join at the start if applicable
     %
-    \ifx\pgfdecorationpreviousinputsegment\pgfdecorationinputsegmentmoveto\else
+    \ifx\pgfdecorationpreviousinputsegment\pgfdecorationinputsegmentmoveto
+      \ifpgf@nfold@closejoinsedgecase
+        % If the previous segment is a moveto and the current segment is a "close joins" edge case,
+        % nothing needs to be drawn here (the relevant draw call will be made at the join of the subsequent
+        % segment). We must therefore make sure that we move to the correct end point of this segment.
+        % Counterintuitively, this is given by the offset of \pgf@nfold@segment@start since the start and end
+        % are reversed in the edge case.
+        \pgfpointadd%
+          {\pgf@nfold@segment@start}%
+          {\pgfpointpolar{\pgfdecoratedinputsegmentendangle+90}{\pgf@shiftdec@amount}}
+        \pgfpathmoveto{}
+       \fi
+    \else
       \pgf@nfold@make@join
     \fi
-  \fi
+  \fi% end if current segment visible
   %
-  % Step 4: Draw the new segment.
+  % Step 3: Draw the new segment.
   %
   % The value of \ifpgf@nfold@continuesegment decides whether we start with a moveto.
-  \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentlineto
-    \ifpgf@nfold@continuesegment
-      \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
-    \else
-      \pgfoffsetline{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+  \ifpgf@nfold@closejoinsedgecase\else
+    \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentlineto
+      \ifpgf@nfold@continuesegment
+        \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+      \else
+        \pgfoffsetline{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+      \fi
     \fi
-  \fi
-  \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentclosepath
-    \pgfwarning{'nfold': The option 'cycle' is not yet properly supported.}
-    \ifpgf@nfold@continuesegment
-      \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
-    \else
-      \pgfoffsetline{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+    \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentclosepath
+      \pgfwarning{'nfold': The option 'cycle' is not yet properly supported.}
+      \ifpgf@nfold@continuesegment
+        \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+      \else
+        \pgfoffsetline{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+      \fi
     \fi
-  \fi
-  \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentcurveto
-    \ifpgf@nfold@continuesegment
-      \pgfoffsetcurvenomove{\pgf@nfold@segment@start}{\pgf@decorate@inputsegment@supporta}{\pgf@decorate@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
-    \else
-      \pgfoffsetcurve{\pgf@nfold@segment@start}{\pgf@decorate@inputsegment@supporta}{\pgf@decorate@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+    \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentcurveto
+      \ifpgf@nfold@continuesegment
+        \pgfoffsetcurvenomove{\pgf@nfold@segment@start}{\pgf@decorate@inputsegment@supporta}{\pgf@decorate@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+      \else
+        \pgfoffsetcurve{\pgf@nfold@segment@start}{\pgf@decorate@inputsegment@supporta}{\pgf@decorate@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+      \fi
     \fi
-  \fi
-  \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentlast
-    % Seems like this never happens
-    \pgfwarning{'nfold': Unexpected state (last part in segment state).}
-  \fi
+    \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentlast
+      % Seems like this never happens
+      \pgfwarning{'nfold': Unexpected state (last part in segment state).}
+    \fi
+  \fi% end if edge case
   % cache the end angle and end point because we need it on the next pass
   \global\pgf@nfold@cached@endangle=\pgfdecoratedinputsegmentendangle pt\relax
   \ifx\pgfdecorationnextinputsegmentobject\pgfdecorationinputsegmentmoveto\else
     \global\let\pgf@nfold@cached@endpoint\pgf@nfold@segment@end
   \fi
-  % Step 5: Extend into the arrow tip at the end (if present)
+  % Step 4: Extend into the arrow tip at the end (if present)
   \ifx\pgfdecorationnextinputsegmentobject\pgfdecorationinputsegmentlast%
     \pgf@nfold@check@tip@end%
     \ifpgf@nfold@tip@implies%
