@@ -112,8 +112,8 @@
     \advance\pgf@x by -\pgf@sys@tonumber\pgf@ya\pgf@yb
     \advance\pgf@y by \pgf@sys@tonumber\pgf@ya\pgf@xb
     \edef\pgf@temp{%
-      \edef\noexpand\pgf@tmp@dot{\the\pgf@y}%
-      \edef\noexpand\pgf@tmp@cross{\the\pgf@x}%
+      \edef\noexpand\pgf@tmp@dot{\pgf@sys@tonumber\pgf@y}%
+      \edef\noexpand\pgf@tmp@cross{\pgf@sys@tonumber\pgf@x}%
     }%
   \expandafter
   \endgroup\pgf@temp
@@ -195,15 +195,16 @@
   \else
     \pgfextract@process\pgf@tmp@secant{\pgfpointnormalised{}}%
     \pgfmathcrossdot{}{\pgf@tmp@tang@ii}%
-     \ifdim\pgf@tmp@dot<.5pt\relax%
+     \ifdim\pgf@tmp@dot pt<.5pt\relax%
        % this can only happen in non-simple curves
        \pgfwarning{pgf-offset: cosine of \pgf@tmp@dot\space clamped to 0.5 in non-simple segment}%
-       \def\pgf@tmp@dot{.5pt}%
+       \def\pgf@tmp@dot{.5}%
     \fi%
-    \pgfmathsetmacro{\pgf@tmp@tanbeta}{\pgf@tmp@cross/\pgf@tmp@dot}%
+    \pgfmathdivide@{\pgf@tmp@cross}{\pgf@tmp@dot}%
+    \let\pgf@tmp@tanbeta\pgfmathresult
     \pgfmathcrossdot{\pgf@tmp@secant}{\pgfpointnormalised{\pgfpointdiff{#1}{#2}}}
     % There are cases where we want #5/secantlen to be quite large, so we should not clamp the value here
-    % \pgfmathparse{1 + #5/\pgf@tmp@secantlen*(\pgf@tmp@cross - \pgf@tmp@dot*\pgf@tmp@tanbeta)}% TODO
+    % \pgfmathparse{1 + #5/\pgf@tmp@secantlen*(\pgf@tmp@cross - \pgf@tmp@dot*\pgf@tmp@tanbeta)}%
     \pgfmath@offset@calculate@scale{\pgf@tmp@secantlen}{\pgf@tmp@cross}{\pgf@tmp@dot}{\pgf@tmp@tanbeta}{#5}%
     \pgfextract@process\pgf@bezier@offset@ii{%
       \pgfpointadd
@@ -212,11 +213,12 @@
     }%
     % third control point
     \pgfmathcrossdot{\pgf@tmp@secant}{\pgf@tmp@tang@i}%
-    \ifdim\pgf@tmp@dot<.5pt\relax
+    \ifdim\pgf@tmp@dot pt<.5pt\relax
       \pgfwarning{pgf-offset: cosine of \pgf@tmp@dot\space clamped to 0.5 in non-simple segment}%
-      \def\pgf@tmp@dot{.5pt}%
+      \def\pgf@tmp@dot{.5}%
     \fi
-    \pgfmathsetmacro{\pgf@tmp@tanbeta}{\pgf@tmp@cross/\pgf@tmp@dot}% TODO
+    \pgfmathdivide@{\pgf@tmp@cross}{\pgf@tmp@dot}%
+    \let\pgf@tmp@tanbeta\pgfmathresult
     \pgfmathcrossdot{\pgf@tmp@secant}{\pgfpointnormalised{\pgfpointdiff{#4}{#3}}}%
     % \pgfmathparse{1 + #5/\pgf@tmp@secantlen*(\pgf@tmp@cross - \pgf@tmp@dot*\pgf@tmp@tanbeta)}%
     \pgfmath@offset@calculate@scale{\pgf@tmp@secantlen}{\pgf@tmp@cross}{\pgf@tmp@dot}{\pgf@tmp@tanbeta}{#5}%
