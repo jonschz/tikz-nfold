@@ -266,6 +266,13 @@
 % #1-#4: control points of the whole Bezier curve
 % #5: offset
 
+% \def\pgfoffsetcurve#1#2#3#4#5{%
+%   \pgf@subdivideandoffsetcurve{#1}{#2}{#3}{#4}{#5}{\pgf@offset@max@recursion}{0}{\pgf@nfold@callback@move}%
+% }
+% \def\pgfoffsetcurvenomove#1#2#3#4#5{%
+%   \pgf@subdivideandoffsetcurve{#1}{#2}{#3}{#4}{#5}{\pgf@offset@max@recursion}{0}{\pgf@nfold@callback@nomove}%
+% }
+
 \def\pgfoffsetcurve#1#2#3#4#5{%
   \pgfoffsetcurvecallback{#1}{#2}{#3}{#4}{#5}{\pgf@nfold@callback@move}%
 }
@@ -273,12 +280,6 @@
   \pgfoffsetcurvecallback{#1}{#2}{#3}{#4}{#5}{\pgf@nfold@callback@nomove}%  
 }
 
-\def\pgfoffsetcurve#1#2#3#4#5{%
-  \pgf@subdivideandoffsetcurve{#1}{#2}{#3}{#4}{#5}{\pgf@offset@max@recursion}{0}{\pgf@nfold@callback@move}%
-}
-\def\pgfoffsetcurvenomove#1#2#3#4#5{%
-  \pgf@subdivideandoffsetcurve{#1}{#2}{#3}{#4}{#5}{\pgf@offset@max@recursion}{0}{\pgf@nfold@callback@nomove}%
-}
 % Arguments:
 % #1-#4: control points of the segment
 % #5: =0 if this is the first segment of the curve, =1 otherwise
