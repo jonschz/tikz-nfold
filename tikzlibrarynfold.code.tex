@@ -18,7 +18,6 @@
 
 \usetikzlibrary{decorations}
 \usetikzlibrary{arrows.meta}
-%\usepgflibrary{bezieroffset}
 \usepgflibrary{bezieroffset}
 
 %
@@ -65,7 +64,7 @@
 
 % check if a decoration segment is visible, i.e. not moveto or last
 \newif\ifpgf@nfold@segm@visible
-\def\ifpgfsegmentvisible#1{%
+\def\checkpgfsegmentvisible#1{%
   \pgf@nfold@segm@visiblefalse%
   \ifx#1\pgfdecorationinputsegmentlineto%
   \pgf@nfold@segm@visibletrue\fi%
@@ -73,7 +72,6 @@
   \pgf@nfold@segm@visibletrue\fi%
   \ifx#1\pgfdecorationinputsegmentclosepath%
   \pgf@nfold@segm@visibletrue\fi%
-  \ifpgf@nfold@segm@visible%
 }
 
 
@@ -237,6 +235,8 @@
 \newif\ifpgf@nfold@continuesegment
 % This stores whether we are in some edge case of very close joins, see below for details
 \newif\ifpgf@nfold@closejoinsedgecase
+% This stores whether we are in an error case where we need to avoid dividing by zero
+\newif\ifpgf@nfold@angletoosharp
 
 % some required computations for the current segment
 \def\pgf@nfold@shift@prepare@segment{%
@@ -264,8 +264,10 @@
   \def\pgf@nfold@shortenstartjoin{0pt}
   \def\pgf@nfold@shortenendjoin{0pt}
   \pgf@nfold@closejoinsedgecasefalse
+  \pgf@nfold@angletoosharpfalse
   % Make a join only if two adjacent segments are both visible
-  \ifpgfsegmentvisible\pgfdecorationcurrentinputsegment
+  \checkpgfsegmentvisible\pgfdecorationcurrentinputsegment
+  \ifpgf@nfold@segm@visible%
     % Step 1.1: Make space for the join at the start if needed
     \ifx\pgfdecorationpreviousinputsegment\pgfdecorationinputsegmentmoveto\else
       \ifdefined\pgfdecorationpreviousinputsegment
@@ -278,6 +280,7 @@
       \ifdim\pgfmathresult pt<0.02pt\relax
         % we go full backwards, don't relocate the start
         \pgfwarning{Angle too sharp in decoration 'nfold', expect visual errors}
+        \pgf@nfold@angletoosharptrue
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenstartjoin}{\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@xa))}
         \pgfpointadd{\pgf@decorate@inputsegment@first}{\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{\pgf@nfold@shortenstartjoin}}
@@ -285,7 +288,8 @@
       \fi
     \fi
     % Step 1.2: Make space for the join at the end if needed
-    \ifpgfsegmentvisible\pgfdecorationnextinputsegmentobject
+		\checkpgfsegmentvisible\pgfdecorationnextinputsegmentobject
+		\ifpgf@nfold@segm@visible%
       % for reasons unknown to me,
       % \pgfdecoratedangletonextinputsegment has a "pt" but the others do not
       \pgf@xa=\pgfdecoratedangle pt\relax
@@ -331,7 +335,10 @@
         \pgfpathmoveto{}
        \fi
     \else
-      \pgf@nfold@make@join
+      % If we draw the lines when the start angle is close to 180 degrees, we get a division by zero
+      \ifpgf@nfold@angletoosharp\else
+        \pgf@nfold@make@join
+      \fi
     \fi
   \fi% end if current segment visible
   %

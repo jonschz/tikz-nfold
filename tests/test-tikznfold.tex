@@ -23,6 +23,34 @@
   \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5] (0,0) -- (2,0) -- (0,0.25);
 \end{tikzpicture}
 
+\subsection{Angle too sharp}
+{
+  \makeatletter
+  \def\clearerrormsg{\let\errormsg\pgfutil@empty}
+  \renewcommand{\pgfwarning}[1]{
+    \ifx\errormsg\pgfutil@empty
+      \xdef\errormsg{#1}
+    \else
+      \xdef\errormsg{\errormsg; #1}
+    \fi
+  }
+  \makeatother
+  \subsubsection{Almost 180 degree turn}
+  \clearerrormsg
+  \begin{tikzpicture}
+    \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0.01);
+  \end{tikzpicture}\\
+  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
+  Actual warning: \errormsg
+  \subsubsection{Exactly 180 degree turn}
+  \clearerrormsg
+  \begin{tikzpicture}
+    \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0);
+  \end{tikzpicture}\\
+  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
+  Actual warning: \errormsg
+}
+
 \subsection{Transformed axes with relative and absolute coordinates}
 
 \begin{tikzpicture}[x={(.3cm,.7cm)}, y={(.7cm,-.3cm)}]
@@ -45,9 +73,9 @@
   \path[line join=miter, draw=green, line width=6pt] (0,0) -- (1, 0) -- (0,1);
   \path[draw=green, line width=6pt] (2,0) -- (3, 0) -- (2,1);
   \path[line join=round, draw=green, line width=6pt] (4,0) -- (5, 0) -- (4, 1);
-  \path[line join=miter, arrows=|-Implies,  double distance=5pt, nfold=4] (0,0) -- (1, 0) -- (0,1);
-  \path[double distance=5pt, nfold=4] (2,0) -- (3, 0) -- (2,1);
-  \path[line join=round,  double distance=5pt, nfold=4] (4,0) -- (5, 0) -- (4, 1);
+  \path[draw, line join=miter, double distance=5pt, nfold=4] (0,0) -- (1, 0) -- (0,1);
+  \path[draw, double distance=5pt, nfold=4] (2,0) -- (3, 0) -- (2,1);
+  \path[draw, line join=round, double distance=5pt, nfold=4] (4,0) -- (5, 0) -- (4, 1);
 \end{tikzpicture}
 
 \subsection{Shorten}
@@ -73,7 +101,7 @@ Shortening needs to be implemented manually, as discussed in the comments.
 
 \begin{tikzpicture}
   \draw[draw=green,opacity=.5,double distance=3pt] (0,0) .. controls (5,.9) and (5,-.8) .. (0,0);
-  \draw[draw=purple, opacity=.5,double distance=3pt, nfold=3] .. controls (5,.9) and (5,-.8) .. (0,0);
+  \draw[draw=purple, opacity=.5,double distance=3pt, nfold=3] (0,0) .. controls (5,.9) and (5,-.8) .. (0,0);
 \end{tikzpicture}
 \begin{tikzpicture}
   \draw[draw=green,opacity=.5,double distance=3pt] (0,-.5) .. controls (5, 1.3) and (5,-1.3) .. (0,.5);
