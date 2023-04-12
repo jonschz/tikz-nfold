@@ -82,7 +82,7 @@
     \pgf@ya=\pgf@y%
     \pgf@process{#2}%
     \pgf@y=\pgf@sys@tonumber\pgf@xa\pgf@y
-    \advance\pgf@y by \pgf@sys@tonumber\pgf@ya\pgf@x
+    \advance\pgf@y by -\pgf@sys@tonumber\pgf@ya\pgf@x
   \pgfmath@returnone\pgf@y
   \endgroup
 }
@@ -94,7 +94,7 @@
     \pgf@ya=\pgf@y%
     \pgf@process{#2}%
     \pgf@x=\pgf@sys@tonumber\pgf@xa\pgf@x
-    \advance\pgf@x by -\pgf@sys@tonumber\pgf@ya\pgf@y
+    \advance\pgf@x by \pgf@sys@tonumber\pgf@ya\pgf@y
   \pgfmath@returnone\pgf@x
   \endgroup
 }
@@ -107,19 +107,19 @@
     \pgf@process{#2}%
     \pgf@xb=\pgf@x
     \pgf@yb=\pgf@y
-    \pgf@y=\pgf@sys@tonumber\pgf@xa\pgf@yb
     \pgf@x=\pgf@sys@tonumber\pgf@xa\pgf@xb
-    \advance\pgf@x by -\pgf@sys@tonumber\pgf@ya\pgf@yb
-    \advance\pgf@y by \pgf@sys@tonumber\pgf@ya\pgf@xb
+    \pgf@y=\pgf@sys@tonumber\pgf@xa\pgf@yb
+    \advance\pgf@x by \pgf@sys@tonumber\pgf@ya\pgf@yb
+    \advance\pgf@y by -\pgf@sys@tonumber\pgf@ya\pgf@xb
     \edef\pgf@temp{%
-      \edef\noexpand\pgf@tmp@dot{\pgf@sys@tonumber\pgf@y}%
-      \edef\noexpand\pgf@tmp@cross{\pgf@sys@tonumber\pgf@x}%
+      \edef\noexpand\pgf@tmp@dot{\pgf@sys@tonumber\pgf@x}%
+      \edef\noexpand\pgf@tmp@cross{\pgf@sys@tonumber\pgf@y}%
     }%
   \expandafter
   \endgroup\pgf@temp
 }
 
-% Calculates abs(\pgf@x) + \pgf@y in #1
+% Calculates abs(\pgf@x) + abs(\pgf@y) in #1
 \def\pgfoffset@abssum#1{%
   \ifdim\pgf@x<0pt
     #1=-\pgf@x
@@ -326,9 +326,10 @@
     \pgfmathcrossproduct{\pgf@itoiv}{\pgf@tmp@tang@ii}%
     % First simplicity check: Are A2 and A3 on the same side of the A1-A4 line?
     % -> compute the sign of the cross products, use the sign function to avoid overflows
+    % just give it a pass if one of them is zero, hence 2 and 3 at the end
     \ifnum
-      \ifdim   \firstcross pt<0pt -1\else\ifdim   \firstcross pt>0pt 1\else 0\fi\fi
-     =\ifdim\pgfmathresult pt<0pt -1\else\ifdim\pgfmathresult pt>0pt 1\else 0\fi\fi
+      \ifdim   \firstcross pt<0pt -1\else\ifdim   \firstcross pt>0pt 1\else 2\fi\fi
+     =\ifdim\pgfmathresult pt<0pt -1\else\ifdim\pgfmathresult pt>0pt 1\else 3\fi\fi
     \relax % the \relax is important!
       \pgf@offset@subdividetrue%
     \else%
