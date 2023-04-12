@@ -15,6 +15,10 @@ All files except `tikz-nfold-doc.tex` and `tikz-nfold-doc.pdf` should be install
 
 This work may be distributed and/or modified under the conditions of the LaTeX Project Public License, either version 1.3c of this license or (at your option) any later version.
 
+## Contributing
+
+Any kind of help is welcome! Feel free to test the library, report issues, and open pull requests. In the latter case, be sure to compile the [unit tests](https://github.com/jonschz/tikz-nfold/tree/main/tests) before and after your changes and look for deviations.
+
 ## Impressions
 
 ![joins](./images/screenshot_join.png)
