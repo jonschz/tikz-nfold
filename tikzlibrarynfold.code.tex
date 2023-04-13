@@ -484,7 +484,7 @@
   \def\pgf@nfold@inputsegmentobjectsmacro{#2}%
   \let\pgf@nfold@inputsegmentobjects\pgfutil@empty%
   \pgfutil@tempdima0pt\relax%
-  \let\pgfpoint@nfold@lastparsed\pgfpoint@nfold@existingpathlast%
+  \edef\pgfpoint@nfold@lastparsed{\pgf@x\the\pgf@path@lastx\pgf@y\the\pgf@path@lasty}%
   \let\pgfpoint@nfold@lastnonmovetoparsed\pgfpoint@origin%
   \let\pgf@nfold@queueinputsegmentobject\pgfutil@empty%
   \let\pgfpoint@nfoldd@firstparsed\pgfutil@empty%
@@ -538,12 +538,17 @@
 % \pgf@nfold@inputsegmentobject@lineto{<length>}{\pgf@x <Last X> \pgf@y <Last Y>}{\pgf@x <X> \pgf@y <Y>}
 %
 \def\pgf@nfold@parselineto#1#2{%
-  \edef\pgf@nfold@temp{%
-    \noexpand\pgf@nfold@inputsegmentobject@lineto{0 pt}{\pgfpoint@nfold@lastparsed}{\pgf@x#1\pgf@y#2}%
-  }%
-  \edef\pgfpoint@nfold@lastparsed{\pgf@x#1\pgf@y#2}%
-  \let\pgfpoint@nfold@lastnonmovetoparsed\pgfpoint@nfold@lastparsed%
-  \expandafter\pgf@nfold@addtoinputsegmentobjects\expandafter{\pgf@nfold@temp}%
+  % remove degenerate line segments (reduces glitches)
+  \pgf@process{\pgfpointdiff{\pgfpoint@nfold@lastparsed}{\pgf@x#1\pgf@y#2}}
+  \pgfoffset@abssum\pgf@xa
+  \ifdim\pgf@xa>.1pt\relax
+    \edef\pgf@nfold@temp{%
+      \noexpand\pgf@nfold@inputsegmentobject@lineto{0 pt}{\pgfpoint@nfold@lastparsed}{\pgf@x#1\pgf@y#2}%
+    }%
+    \edef\pgfpoint@nfold@lastparsed{\pgf@x#1\pgf@y#2}%
+    \let\pgfpoint@nfold@lastnonmovetoparsed\pgfpoint@nfold@lastparsed%
+    \expandafter\pgf@nfold@addtoinputsegmentobjects\expandafter{\pgf@nfold@temp}%
+  \fi
   \pgf@nfold@@parsesoftpath%
 }%
 

@@ -124,19 +124,19 @@ Does not crash, which is good. However, need to consider if this is the desired 
 \begin{tikzpicture}
   \draw[arrows=-Implies, double equal sign distance, dashed, nfold] (0,0) -- (1,0);
   \draw[arrows=-Implies, double equal sign distance, dashed, nfold] (2,0) to[out=30, in=150] (4,0);
-\end{tikzpicture}
+\end{tikzpicture}\\
 The desynchronisation in the latter case is a fundamental limitation of this approach.
 
 
 \subsection{Short straight lines and large angles}
 
 \begin{tikzpicture}
-	\draw[green, double distance=4pt, decorate, decoration=zigzag, opacity=.5] (0,0) -- (1,0);
-	\draw[purple, double distance=4pt, decorate, decoration=zigzag, nfold, opacity=.5] (0,0) -- (1,0);
-	\draw[black,decorate, decoration=zigzag] (2,0) -- (3,0);
-	\draw[purple, double distance=7pt, decorate, decoration=zigzag, nfold, line join=round] (2,0) -- (3,0);
-	\draw[green, double distance=8pt, decorate, decoration=zigzag, opacity=.5] (4,0) -- (5,0);
-	\draw[purple, double distance=8pt, decorate, decoration=zigzag, nfold, opacity=.5] (4,0) -- (5,0);
+  \draw[green, double distance=4pt, decorate, decoration=zigzag, opacity=.5] (0,0) -- (1,0);
+  \draw[purple, double distance=4pt, decorate, decoration=zigzag, nfold, opacity=.5] (0,0) -- (1,0);
+  \draw[black,decorate, decoration=zigzag] (2,0) -- (3,0);
+  \draw[purple, double distance=7pt, decorate, decoration=zigzag, nfold, line join=round] (2,0) -- (3,0);
+  \draw[green, double distance=8pt, decorate, decoration=zigzag, opacity=.5] (4,0) -- (5,0);
+  \draw[purple, double distance=8pt, decorate, decoration=zigzag, nfold, opacity=.5] (4,0) -- (5,0);
 \end{tikzpicture}
 \vspace{1cm}
 
@@ -202,6 +202,14 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \testarrow{dr,shift left=-1pt, out=30, in=180,"l", "m"'}{nfold}
   & c_3 \\
   d_1 \testarrow{r, bend right, double distance=5pt, "a","b"'}{nfold=5} & d_2 & d_3
+\end{tikzcd}
+
+\subsection{Squiggly (issue \#4)}
+
+\begin{tikzcd}
+  \bullet & \bullet
+  \arrow[Rightarrow, squiggly, from=1-1, to=1-2, green]
+  \arrow[Rightarrow, squiggly, from=1-1, to=1-2, nfold, purple, opacity=.5]
 \end{tikzcd}
 
 \end{document}
