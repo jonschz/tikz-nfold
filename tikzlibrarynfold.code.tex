@@ -198,11 +198,15 @@
   \pgfmathparse{abs(\pgf@x) + abs(\pgf@y)}
   \ifdim\pgfmathresult pt>0.1pt\relax
     % First step: Check if left or right turn (-1 = left, 1=right)
-    % TODO can we refactor this to just the sign of deltaphi?
-    \pgfmathsetmacro{\turnindicator}{sign(sin(-\pgf@nfold@deltaphi)}
-    % between 0.0 and 1.0; 0=no distance to cover in the join, 1=maximum distance to cover
+    \ifdim\pgf@nfold@deltaphi pt<0pt
+      \def\turnindicator{1}
+    \else
+      \def\turnindicator{-1}
+    \fi
+    % \insidepercentage: between 0.0 and 1.0;
+    % 0=no distance to cover in the join, 1=maximum distance to cover
     \pgfmathsetmacro{\insidepercentage}{-.5*\turnindicator*\pgf@shiftdec@fraction+.5}
-    \if m\pgf@cached@linejoin % because both are only one character, \ifx is not needed
+    \if m\pgf@cached@linejoin% \ifx is not needed because both are only one character
       % miter join
       % First we implement the miter limit: If the angle is too sharp, the miter join is replaced
       % by a bevel join. This is controlled by /tikz/miter limit=..., initially 10.
@@ -354,41 +358,39 @@
   % Step 3: Draw the new segment.
   %
   % The value of \ifpgf@nfold@continuesegment decides whether we start with a moveto.
-  % TODO should closepath and moveto also be excluded from the edge case?
-  % The edge case can only happen for lineto; it would still be cleaner to switch this around
-  \ifpgf@nfold@closejoinsedgecase\else
-    \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentmoveto
-      \pgfpathmoveto{\pgf@nfold@inputsegment@last}
-    \fi
-    \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlineto
+  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentmoveto
+    \pgfpathmoveto{\pgf@nfold@inputsegment@last}
+  \fi
+  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlineto
+    \ifpgf@nfold@closejoinsedgecase\else
       \ifpgf@nfold@continuesegment
         \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
       \else
         \pgfoffsetline{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
       \fi
     \fi
-    \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentclosepath
-	  % Incomplete: proper join is missing
-      % Idea: when parsing the path, add a detection if there is a closepath at the current segment,
-      % then cache the data of the last segment.
-      % We could then insert a "fake previous segment" into the path at the right place
-      \pgfwarning{'nfold': The option 'cycle' is not yet properly supported.}
-      \pgfpathclose
+  \fi
+  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentclosepath
+    % Incomplete: proper join is missing
+    % Idea: when parsing the path, add a detection if there is a closepath at the current segment,
+    % then cache the data of the last segment.
+    % We could then insert a "fake previous segment" into the path at the right place
+    \pgfwarning{'nfold': The option 'cycle' is not yet properly supported.}
+    \pgfpathclose
 % TODO Old code, likely no longer needed
 %      \ifpgf@nfold@continuesegment
 %        \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
 %      \else
 %        \pgfoffsetline{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
 %      \fi
+  \fi
+  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto
+    \ifpgf@nfold@continuesegment
+      \pgfoffsetcurvenomove{\pgf@nfold@segment@start}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+    \else
+      \pgfoffsetcurve{\pgf@nfold@segment@start}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
     \fi
-    \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto
-      \ifpgf@nfold@continuesegment
-        \pgfoffsetcurvenomove{\pgf@nfold@segment@start}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
-      \else
-        \pgfoffsetcurve{\pgf@nfold@segment@start}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
-      \fi
-    \fi
-  \fi% end if edge case
+  \fi
   % cache the end point because we need it on the next pass
   \ifx\pgf@nfold@next@inputsegment\pgf@nfold@inputsegmentmoveto\else
     \global\let\pgf@nfold@cached@endpoint\pgf@nfold@segment@end
