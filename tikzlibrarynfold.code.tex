@@ -185,10 +185,12 @@
 
 \def\pgf@nfold@make@join{
   % Offset the start and end of this join
-  \pgfpointadd{\pgf@nfold@cached@endpoint}{\pgfpointpolar{\pgf@nfold@previous@endangle+90}{\pgf@shiftdec@amount}}
-  \pgfstorepoint\pgf@nfold@join@start
-  \pgfpointadd{\pgf@nfold@segment@start}{\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@shiftdec@amount}}
-  \pgfstorepoint\pgf@nfold@join@end
+  \pgfextract@process\pgf@nfold@join@start{%
+    \pgfpointadd{\pgf@nfold@cached@endpoint}
+                {\pgfpointpolar{\pgf@nfold@previous@endangle+90}{\pgf@shiftdec@amount}}}%
+  \pgfextract@process\pgf@nfold@join@end{%
+    \pgfpointadd{\pgf@nfold@segment@start}
+                {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@shiftdec@amount}}}%
   \pgfpointdiff{\pgf@nfold@join@start}{\pgf@nfold@join@end}
   % Check if the start of this segment is too close to the end of the previous segment.
   % In that case we don't insert a join segment, as it would look rather glitchy.
@@ -288,9 +290,9 @@
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenstartjoin}%
           {\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@nfold@deltaphi@start))}
-        \pgfpointadd{\pgf@nfold@inputsegment@first}%
-          {\pgfpointpolar{\pgf@nfold@cur@startangle}{\pgf@nfold@shortenstartjoin}}
-        \pgfstorepoint\pgf@nfold@segment@start
+        \pgfextract@process\pgf@nfold@segment@start{%
+          \pgfpointadd{\pgf@nfold@inputsegment@first}%
+                      {\pgfpointpolar{\pgf@nfold@cur@startangle}{\pgf@nfold@shortenstartjoin}}}%
       \fi
     \fi
     % Step 1.2: Make space for the join at the end if needed
@@ -303,9 +305,9 @@
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenendjoin}%
           {\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@nfold@deltaphi@end))}
-        \pgfpointadd{\pgf@nfold@inputsegment@last}%
-          {\pgfpointpolar{\pgf@nfold@cur@endangle}{-\pgf@nfold@shortenendjoin}}
-        \pgfstorepoint\pgf@nfold@segment@end
+        \pgfextract@process\pgf@nfold@segment@end{%
+          \pgfpointadd{\pgf@nfold@inputsegment@last}%
+                      {\pgfpointpolar{\pgf@nfold@cur@endangle}{-\pgf@nfold@shortenendjoin}}}%
       \fi
       % Step 1.3: Detect an edge case
       % This edge case appears whenever the current segment is such a short line that we would
