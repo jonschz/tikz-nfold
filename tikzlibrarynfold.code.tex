@@ -149,10 +149,12 @@
   % The code must be invariant under deltaphi -> deltaphi + 360, which can be verified experimentally
   \pgfmathsetmacro{\pgf@nfold@deltaphi}{\pgfdecoratedinputsegmentstartangle-\pgf@nfold@cached@endangle}
   % Offset the start and end of this join
-  \pgfpointadd{\pgf@nfold@cached@endpoint}{\pgfpointpolar{\pgf@nfold@cached@endangle+90}{\pgf@shiftdec@amount}}
-  \pgfstorepoint\pgf@nfold@join@start
-  \pgfpointadd{\pgf@nfold@segment@start}{\pgfpointpolar{\pgfdecoratedinputsegmentstartangle+90}{\pgf@shiftdec@amount}}
-  \pgfstorepoint\pgf@nfold@join@end
+  \pgfextract@process\pgf@nfold@join@start{%
+    \pgfpointadd{\pgf@nfold@cached@endpoint}
+                {\pgfpointpolar{\pgf@nfold@cached@endangle+90}{\pgf@shiftdec@amount}}}%
+  \pgfextract@process\pgf@nfold@join@end{%
+    \pgfpointadd{\pgf@nfold@segment@start}
+                {\pgfpointpolar{\pgfdecoratedinputsegmentstartangle+90}{\pgf@shiftdec@amount}}}%
   \pgfpointdiff{\pgf@nfold@join@start}{\pgf@nfold@join@end}
   % Check if the start of this segment is too close to the end of the previous segment.
   % In that case we don't insert a join segment, as it would look rather glitchy.
@@ -283,8 +285,9 @@
         \pgf@nfold@angletoosharptrue
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenstartjoin}{\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@xa))}
-        \pgfpointadd{\pgf@decorate@inputsegment@first}{\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{\pgf@nfold@shortenstartjoin}}
-        \pgfstorepoint\pgf@nfold@segment@start
+        \pgfextract@process\pgf@nfold@segment@start{%
+          \pgfpointadd{\pgf@decorate@inputsegment@first}
+                      {\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{\pgf@nfold@shortenstartjoin}}}%
       \fi
     \fi
     % Step 1.2: Make space for the join at the end if needed
@@ -300,8 +303,9 @@
         \pgfwarning{Angle too sharp in decoration 'nfold', expect visual errors}
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenendjoin}{\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@xa))}
-        \pgfpointadd{\pgf@decorate@inputsegment@last}{\pgfpointpolar{\pgfdecoratedinputsegmentendangle}{-\pgf@nfold@shortenendjoin}}
-        \pgfstorepoint\pgf@nfold@segment@end
+        \pgfextract@process\pgf@nfold@segment@end{%
+          \pgfpointadd{\pgf@decorate@inputsegment@last}
+                      {\pgfpointpolar{\pgfdecoratedinputsegmentendangle}{-\pgf@nfold@shortenendjoin}}}%
       \fi
       % Step 1.3: Detect an edge case
       % This edge case appears whenever the current segment is such a short line that we would have to reduce its length
@@ -427,17 +431,17 @@
       \pgfmathparse{-\pgf@shorten@end@additional}
     \fi
     % This is the point where the arrow body ends
-    \pgfpointadd%
-      {\pgf@decorate@inputsegment@last}%
-      {\pgfpointpolar{\pgfdecoratedinputsegmentendangle}{\pgfmathresult pt}}%
-    \pgfstorepoint\pgf@nfold@segment@end%
+    \pgfextract@process\pgf@nfold@segment@end{%
+      \pgfpointadd{\pgf@decorate@inputsegment@last}%
+                  {\pgfpointpolar{\pgfdecoratedinputsegmentendangle}{\pgfmathresult pt}}}%
     % This is the tip of the arrow, required for drawing the arrow head
+    \pgfextract@process\pgf@nfold@original@last{%
     \pgfpointadd%
       {\pgf@decorate@inputsegment@last}%
       {\pgfpointpolar%
         {\pgfdecoratedinputsegmentendangle}%
-        {-\pgf@shorten@end@additional}}%
-    \pgfglobalstorepoint\pgf@nfold@original@last%
+          {-\pgf@shorten@end@additional}}}%
+    \global\let\pgf@nfold@original@last\pgf@nfold@original@last
   \fi%
   \ifx\pgfdecorationcurrentinputsegment\pgfdecorationinputsegmentmoveto%
     \pgfpathmoveto{\pgf@nfold@segment@end}%
@@ -479,11 +483,12 @@
     \pgfsetlinewidth{\pgfmathresult pt}
     % shorten < and shorten > do not work well with this decoration for various reasons.
     % We "bake" them into the path in the pre-pass and then disable them for the rendering passes.
+    \pgfextract@process\pgf@nfold@original@first{%
     \pgfpointadd%
       {\pgf@decorate@inputsegment@first}%
-      {\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{\pgf@shorten@start@additional}}
+        {\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{\pgf@shorten@start@additional}}}%
     % store the tip of the arrow
-    \pgfglobalstorepoint\pgf@nfold@original@first%
+    \global\let\pgf@nfold@original@first\pgf@nfold@original@first%
     % make space if applicable
     \pgf@nfold@check@tip@start%
     \ifpgf@nfold@tip@implies%
@@ -716,8 +721,8 @@
     % Step 1: Find the intersection of the arrow's path with the head. This is is computationally
     % expensive, so we first look if the value has been precomputed.
     \ifcsname tikz@arrow@intersec@cache@\pgf@nfold@index @\the\pgf@nfold@dec@order\endcsname
-      \csname tikz@arrow@intersec@cache@\pgf@nfold@index @\the\pgf@nfold@dec@order\endcsname
-      \pgfstorepoint\pgf@nfold@arrowintersect
+      \pgfextract@process\pgf@nfold@arrowintersect
+        {\csname tikz@arrow@intersec@cache@\pgf@nfold@index @\the\pgf@nfold@dec@order\endcsname}%
     \else
       % the intersection has not been precomputed, thus compute on the fly here
       \pgfintersectionofpaths{
@@ -729,16 +734,14 @@
         \pgfpathlineto{\pgfqpoint{3pt}{\pgf@shiftdec@fraction pt}}
       }
       \ifnum\pgfintersectionsolutions>0
-        \pgfpointintersectionsolution{1}
-        \pgfstorepoint\pgf@nfold@arrowintersect
+        \pgfextract@process\pgf@nfold@arrowintersect{\pgfpointintersectionsolution{1}}%
         \makeatother
         \typeout{tikz-nfold: computed intersection cache@\pgf@nfold@index @\the\pgf@nfold@dec@order: \string\pgfqpoint{\the\pgf@x}{\the\pgf@y}^^J}
         \makeatletter
       \else
         % this is a failsafe and should never be reached
         \pgfwarning{'nfold': did not find intersection}
-        \pgfqpoint{0pt}{\pgf@shiftdec@fraction pt}
-        \pgfstorepoint\pgf@nfold@arrowintersect
+        \pgfextract@process\pgf@nfold@arrowintersect{\pgfqpoint{0pt}{\pgf@shiftdec@fraction pt}}%
       \fi
     \fi% if precomputed
   % Step 2: Extend the arrow body to the intersection point.
