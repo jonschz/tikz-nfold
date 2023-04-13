@@ -65,7 +65,7 @@
 
 % check if a decoration segment is visible, i.e. not moveto or last
 \newif\ifpgf@nfold@segm@visible
-\def\ifpgfsegmentvisible#1{%
+\def\checkpgfsegmentvisible#1{%
   \pgf@nfold@segm@visiblefalse%
   \ifx#1\pgfdecorationinputsegmentlineto%
   \pgf@nfold@segm@visibletrue\fi%
@@ -73,7 +73,6 @@
   \pgf@nfold@segm@visibletrue\fi%
   \ifx#1\pgfdecorationinputsegmentclosepath%
   \pgf@nfold@segm@visibletrue\fi%
-  \ifpgf@nfold@segm@visible%
 }
 
 
@@ -154,7 +153,6 @@
   \pgfextract@process\pgf@nfold@join@start{%
     \pgfpointadd{\pgf@nfold@cached@endpoint}
                 {\pgfpointpolar{\pgf@nfold@cached@endangle+90}{\pgf@shiftdec@amount}}}%
-
   \pgfextract@process\pgf@nfold@join@end{%
     \pgfpointadd{\pgf@nfold@segment@start}
                 {\pgfpointpolar{\pgfdecoratedinputsegmentstartangle+90}{\pgf@shiftdec@amount}}}%
@@ -240,6 +238,8 @@
 \newif\ifpgf@nfold@continuesegment
 % This stores whether we are in some edge case of very close joins, see below for details
 \newif\ifpgf@nfold@closejoinsedgecase
+% This stores whether we are in an error case where we need to avoid dividing by zero
+\newif\ifpgf@nfold@angletoosharp
 
 % some required computations for the current segment
 \def\pgf@nfold@shift@prepare@segment{%
@@ -267,8 +267,10 @@
   \def\pgf@nfold@shortenstartjoin{0pt}
   \def\pgf@nfold@shortenendjoin{0pt}
   \pgf@nfold@closejoinsedgecasefalse
+  \pgf@nfold@angletoosharpfalse
   % Make a join only if two adjacent segments are both visible
-  \ifpgfsegmentvisible\pgfdecorationcurrentinputsegment
+  \checkpgfsegmentvisible\pgfdecorationcurrentinputsegment
+  \ifpgf@nfold@segm@visible%
     % Step 1.1: Make space for the join at the start if needed
     \ifx\pgfdecorationpreviousinputsegment\pgfdecorationinputsegmentmoveto\else
       \ifdefined\pgfdecorationpreviousinputsegment
@@ -281,6 +283,7 @@
       \ifdim\pgfmathresult pt<0.02pt\relax
         % we go full backwards, don't relocate the start
         \pgfwarning{Angle too sharp in decoration 'nfold', expect visual errors}
+        \pgf@nfold@angletoosharptrue
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenstartjoin}{\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@xa))}
         \pgfextract@process\pgf@nfold@segment@start{%
@@ -289,7 +292,8 @@
       \fi
     \fi
     % Step 1.2: Make space for the join at the end if needed
-    \ifpgfsegmentvisible\pgfdecorationnextinputsegmentobject
+		\checkpgfsegmentvisible\pgfdecorationnextinputsegmentobject
+		\ifpgf@nfold@segm@visible%
       % for reasons unknown to me,
       % \pgfdecoratedangletonextinputsegment has a "pt" but the others do not
       \pgf@xa=\pgfdecoratedangle pt\relax
@@ -336,7 +340,10 @@
         \pgfpathmoveto{}
        \fi
     \else
-      \pgf@nfold@make@join
+      % If we draw the lines when the start angle is close to 180 degrees, we get a division by zero
+      \ifpgf@nfold@angletoosharp\else
+        \pgf@nfold@make@join
+      \fi
     \fi
   \fi% end if current segment visible
   %
@@ -430,10 +437,10 @@
                   {\pgfpointpolar{\pgfdecoratedinputsegmentendangle}{\pgfmathresult pt}}}%
     % This is the tip of the arrow, required for drawing the arrow head
     \pgfextract@process\pgf@nfold@original@last{%
-      \pgfpointadd%
-        {\pgf@decorate@inputsegment@last}%
-        {\pgfpointpolar%
-          {\pgfdecoratedinputsegmentendangle}%
+    \pgfpointadd%
+      {\pgf@decorate@inputsegment@last}%
+      {\pgfpointpolar%
+        {\pgfdecoratedinputsegmentendangle}%
           {-\pgf@shorten@end@additional}}}%
     \global\let\pgf@nfold@original@last\pgf@nfold@original@last
   \fi%
@@ -478,8 +485,8 @@
     % shorten < and shorten > do not work well with this decoration for various reasons.
     % We "bake" them into the path in the pre-pass and then disable them for the rendering passes.
     \pgfextract@process\pgf@nfold@original@first{%
-      \pgfpointadd%
-        {\pgf@decorate@inputsegment@first}%
+    \pgfpointadd%
+      {\pgf@decorate@inputsegment@first}%
         {\pgfpointpolar{\pgfdecoratedinputsegmentstartangle}{\pgf@shorten@start@additional}}}%
     % store the tip of the arrow
     \global\let\pgf@nfold@original@first\pgf@nfold@original@first%

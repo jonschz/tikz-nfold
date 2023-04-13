@@ -105,15 +105,13 @@
     \pgf@xa=\pgf@x%
     \pgf@ya=\pgf@y%
     \pgf@process{#2}%
-    \pgf@xb=\pgf@x
-    \pgf@yb=\pgf@y
-    \pgf@x=\pgf@sys@tonumber\pgf@xa\pgf@xb
-    \pgf@y=\pgf@sys@tonumber\pgf@xa\pgf@yb
-    \advance\pgf@x by \pgf@sys@tonumber\pgf@ya\pgf@yb
-    \advance\pgf@y by -\pgf@sys@tonumber\pgf@ya\pgf@xb
+    \pgf@xb=\pgf@sys@tonumber\pgf@xa\pgf@x
+    \pgf@yb=\pgf@sys@tonumber\pgf@xa\pgf@y
+    \advance\pgf@xb by \pgf@sys@tonumber\pgf@ya\pgf@y
+    \advance\pgf@yb by -\pgf@sys@tonumber\pgf@ya\pgf@x
     \edef\pgf@temp{%
-      \edef\noexpand\pgf@tmp@dot{\pgf@sys@tonumber\pgf@x}%
-      \edef\noexpand\pgf@tmp@cross{\pgf@sys@tonumber\pgf@y}%
+      \edef\noexpand\pgf@tmp@dot{\pgf@sys@tonumber\pgf@xb}%
+      \edef\noexpand\pgf@tmp@cross{\pgf@sys@tonumber\pgf@yb}%
     }%
   \expandafter
   \endgroup\pgf@temp
@@ -165,7 +163,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \def\pgf@offset@bezier@segment#1#2#3#4#5{%
-  % TODO would it make sense to use \pgf@process here?
   % normalise tangents and normals; this avoids overflow issues later, and we need
   % the normal vector to be of length 1 anyway
   \pgf@offset@compute@tangents{#1}{#2}{#3}{#4}%
