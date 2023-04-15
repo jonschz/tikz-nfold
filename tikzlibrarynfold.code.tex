@@ -30,8 +30,6 @@
 % - globally rename \pgf@shiftdec@amount
 % - globally rename \pgf@decoration@nfold@hwidth
 % - can we remove some or all of \global, \gdef, \xdef now?
-% - Fix extension into arrow tip, detect Implies
-%   - try conditional logic with \pgf@end@tip@sequence? Old arrow detection code?
 % - Make sure we don't break \pgf@up@draw@arrows@only
 % - new code: search for "deco" to see if we missed anything
 %
@@ -331,7 +329,7 @@
       \fi
     \fi% end if next segment visible
     %
-    % Step 2: Draw the join at the start if applicable
+    % Step 2.1: Draw the join at the start if applicable
     %
     \ifx\pgf@nfold@previousinputsegment\pgf@nfold@inputsegmentmoveto
       \ifpgf@nfold@closejoinsedgecase
@@ -354,13 +352,16 @@
       \fi
     \fi
   \fi% end if current segment visible
+  % Step 2.2: Store where the current end point was relocated
+  % in order to make space for the end join. This will be used
+  % when wed draw the join at the start of the next segment
+  \ifx\pgf@nfold@next@inputsegment\pgf@nfold@inputsegmentmoveto\else
+    \global\let\pgf@nfold@cached@endpoint\pgf@nfold@segment@end
+  \fi
   %
   % Step 3: Draw the new segment.
   %
   % The value of \ifpgf@nfold@continuesegment decides whether we start with a moveto.
-  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentmoveto
-    \pgfpathmoveto{\pgf@nfold@inputsegment@last}
-  \fi
   \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlineto
     \ifpgf@nfold@closejoinsedgecase\else
       \ifpgf@nfold@continuesegment
@@ -391,20 +392,182 @@
       \pgfoffsetcurve{\pgf@nfold@segment@start}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
     \fi
   \fi
-  % cache the end point because we need it on the next pass
-  \ifx\pgf@nfold@next@inputsegment\pgf@nfold@inputsegmentmoveto\else
-    \global\let\pgf@nfold@cached@endpoint\pgf@nfold@segment@end
+  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentmoveto
+    % Every moveto is executed in the offsetting of the subsequent draw command
+    % and is thus not needed here
+    \ifx\pgf@nfold@previousinputsegment\pgf@nfold@inputsegmentfirst
+      % Draw the tip extension at the start (if present)
+      \ifnum\pgf@nfold@start@arrowcode=1
+        \pgf@nfold@extendtotip{s}%
+      \fi%
+    \fi
   \fi
-  % TODO needs to be re-implemented
+  % TODO rename: In the next pass, this is the old end point, shortened to make room for the join
   % Step 4: Extend into the arrow tip at the end (if present)
-%  \ifx\pgfdecorationnextinputsegmentobject\pgf@nfold@inputsegmentlast%
-%    \pgf@nfold@check@tip@end%
-%    \ifpgf@nfold@tip@implies%
-%      \pgf@nfold@extendtotip{e}%
-%    \fi%
-%  \fi%
+  \ifx\pgf@nfold@next@segmenttype\pgf@nfold@inputsegmentlast%
+    \ifnum\pgf@nfold@end@arrowcode=1
+      \pgf@nfold@extendtotip{e}%
+    \fi%
+  \fi%
 }
 
+
+% Rendering arrow tips
+% --------------------
+
+% Precomputed intersections
+%
+% For arrows of order n > 2 with an Implies tip, the constituent parts of the n-fold arrow
+% end somewhere in the middle of the tip. The exact end point must be computed using
+% the intersections library. To speed up compilation times, the intersection points are precomputed
+% up to n = 5. If your document contains arrows of order 6 or larger, consider adding those
+% as well; the values are output in the log file.
+\expandafter\def\csname tikz@arrow@intersec@cache@2@3\endcsname{\pgfqpoint{2pt}{0pt}}
+\expandafter\def\csname tikz@arrow@intersec@cache@2@4\endcsname{\pgfqpoint{0.94063pt}{-0.33333pt}}
+\expandafter\def\csname tikz@arrow@intersec@cache@3@4\endcsname{\pgfqpoint{0.94063pt}{0.33333pt}}
+\expandafter\def\csname tikz@arrow@intersec@cache@2@5\endcsname{\pgfqpoint{0.64167pt}{-0.5pt}}
+\expandafter\def\csname tikz@arrow@intersec@cache@3@5\endcsname{\pgfqpoint{2pt}{0pt}}
+\expandafter\def\csname tikz@arrow@intersec@cache@4@5\endcsname{\pgfqpoint{0.64167pt}{0.5pt}}
+% intersections are precomputed up to this order
+\def\tikz@arrow@intersec@numcached{5}
+
+% This macro extends the arrow body to the tips
+% parameter: s=start, e=end
+\def\pgf@nfold@extendtotip#1{
+  % Do not extend the arrow for index=1 and index=order, it already ends in the right place
+  \ifnum\pgf@nfold@index>1\relax\ifnum\pgf@nfold@index<\pgf@nfold@order\relax%
+    % Step 1: Find the intersection of the arrow's path with the head
+    \ifcsname tikz@arrow@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname
+      \pgfextract@process\pgf@nfold@arrowintersect
+        {\csname tikz@arrow@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname}%
+    \else
+      % the intersection has not been precomputed, thus compute on the fly here
+      \pgfintersectionofpaths{
+        % specify the tip
+        \pgfpathmoveto{\pgfqpoint{-1.4pt}{2.65pt}}
+        \pgfpathcurveto{\pgfqpoint{-0.75pt}{1.25pt}}{\pgfqpoint{1pt}{0.05pt}}{\pgfqpoint{2pt}{0pt}}
+        \pgfpathcurveto{\pgfqpoint{1pt}{-0.05pt}}{\pgfqpoint{-0.75pt}{-1.25pt}}{\pgfqpoint{-1.4pt}{-2.65pt}}
+      }{
+        % extend the body to intersect the tip
+        \pgfpathmoveto{\pgfqpoint{-3pt}{\pgf@shiftdec@fraction pt}}
+        \pgfpathlineto{\pgfqpoint{3pt}{\pgf@shiftdec@fraction pt}}
+      }
+      \ifnum\pgfintersectionsolutions>0
+        \pgfextract@process\pgf@nfold@arrowintersect{\pgfpointintersectionsolution{1}}%
+        \typeout{tikz-nfold: computed intersection cache@\the\pgf@nfold@index @\the\pgf@nfold@order: \string\pgfqpoint{\the\pgf@x}{\the\pgf@y}^^J}
+        % add the new intersection to the cache
+        \expandafter\xdef\csname tikz@arrow@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname{\noexpand\pgfqpoint{\the\pgf@x}{\the\pgf@y}}
+      \else
+        % this is a failsafe and should never be reached
+        \pgfwarning{'nfold': did not find intersection}
+        \pgfextract@process\pgf@nfold@arrowintersect{\pgfqpoint{0pt}{\pgf@shiftdec@fraction pt}}%
+      \fi
+    \fi% if precomputed
+  % Step 2: Extend the arrow body to the intersection point.
+  % If the tip is at the beginning of the path, we have to move to the intersection
+  % and then draw a line to the "regular" starting point. The subsequent segment then
+  % should omit its moveto.
+  % If the tip is at the end, we are already in the right position and only need to extend
+  % the current path to the intersection point.
+  \begingroup
+    \pgftransformreset
+    \if#1s
+      \pgftransformshift{\pgf@nfold@segment@start}
+      \pgftransformrotate{\pgf@nfold@next@startangle}
+      \pgftransformxscale{-1}
+    \else
+      \pgftransformshift{\pgf@nfold@segment@end}
+      \pgftransformrotate{\pgf@nfold@cur@endangle}
+    \fi
+    % we don't want to undo the shift by .42\pgflinewidth after the scaling
+    \pgfutil@tempdima=\pgf@decoration@nfold@hwidth
+    \pgfutil@tempdima=\pgf@shiftdec@fraction\pgfutil@tempdima
+    \pgfextract@process\pgf@nfold@startofextension
+      {\pgfpointtransformed{\pgfqpoint{0pt}{\pgfutil@tempdima}}}
+    % 0.5 - 0.06 = 0.42
+    \pgftransformshift{\pgfqpoint{.42\pgflinewidth}{0pt}}
+    \pgftransformscale{\pgf@decoration@nfold@hwidth}
+    \pgfextract@process\pgf@nfold@arrowintersect{\pgfpointtransformed{\pgf@nfold@arrowintersect}}
+    \global\let\pgf@nfold@startofextension\pgf@nfold@startofextension
+    \global\let\pgf@nfold@arrowintersect\pgf@nfold@arrowintersect
+  \endgroup
+  \if#1s
+    \pgfpathmoveto{\pgf@nfold@arrowintersect}
+    % This is precisely the start of the body, shifted vertically
+    \pgfpathlineto{\pgf@nfold@startofextension}
+    % hack: We make the next segment believe that this segment was a lineto
+    % so the path does not get interrupted
+    \let\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlineto
+    \let\pgf@nfold@cur@endangle\pgf@nfold@next@startangle
+  \else\if#1e
+    \pgfpathlineto{\pgf@nfold@arrowintersect}
+  \else
+    \pgferror{Invalid argument to \string\pgf@nfold@extendtotip: \meaning#1}
+  \fi\fi
+  \pgftransformreset
+\fi\fi% if 1 < i < nArrows
+}
+
+% Parsing the arrow tips
+% ----------------------
+%
+% We need to detect if the user has set Implies[] arrows at the start and/or end tip.
+% To do so, we parse \pgf@start@tip@sequence. If the user specifies Implies[] manually,
+% we find that
+%   pgf@start@tip@sequence=\pgf@arrow@handle{Implies}{...}
+% However, in other cases (like tikz-cd) we may find 
+%   \pgf@arrow@handle@shorthand@empty {\csname pgf@ar@means@tikzcd implies cap\endcsname }
+% In such cases we must expand the first parameter once and then match as above.
+
+\def\pgf@nfold@parsearrows{
+  \ifpgfutil@tempswa% this is set in \pgfusepath and stores whether we draw arrow tips at all
+    \expandafter\pgf@nfold@parsearrowmacro\pgf@start@tip@sequence\relax
+    \let\pgf@nfold@start@arrowcode\pgf@nfold@detectedarrow
+    \expandafter\pgf@nfold@parsearrowmacro\pgf@end@tip@sequence\relax
+    \let\pgf@nfold@end@arrowcode\pgf@nfold@detectedarrow
+  \else
+    \def\pgf@nfold@start@arrowcode{0}
+    \def\pgf@nfold@end@arrowcode{0}
+  \fi
+}
+
+\def\pgf@nfold@parsearrowmacro#1{%
+  \def\pgf@nfold@detectedarrow{0}
+  \ifx#1\relax
+    \let\pgf@next\relax
+  \else
+    \ifx#1\pgf@arrow@handle
+      % found \pgf@arrow@handle{...}, now parse the first parameter
+      \let\pgf@next\pgf@nfold@parse@arrow@handle
+    \else
+      \ifx#1\pgf@arrow@handle@shorthand@empty
+        \let\pgf@next\pgf@nfold@parse@shorthandempty
+      \else
+        % found nothing
+        \let\pgf@next\pgfutil@gobble@until@relax
+      \fi
+    \fi
+  \fi
+  \pgf@next
+}
+
+\def\pgf@nfold@param@Implies{Implies}
+
+\def\pgf@nfold@parse@arrow@handle#1{%
+  \def\pgf@tmp{#1}
+  \ifx\pgf@tmp\pgf@nfold@param@Implies
+    \def\pgf@nfold@detectedarrow{1}
+  \fi
+  \pgfutil@gobble@until@relax
+}
+
+\def\pgf@nfold@parse@shorthandempty#1{
+  % Expand #1 once (\pgf@arrow@handle@shorthand@empty is just an identity operator)
+  \expandafter\def\expandafter\pgf@tmp\expandafter{#1}
+  \expandafter\pgf@nfold@parsearrowmacro\pgf@tmp\relax
+  % still need to gobble the rest of the orginal arrow definition
+  \pgfutil@gobble@until@relax
+}
 
 
 %
@@ -596,6 +759,7 @@
 
 
 %% Components of the path, modified
+\def\pgf@nfold@inputsegmentfirst{first}%
 \def\pgf@nfold@inputsegmentmoveto{moveto}%
 \def\pgf@nfold@inputsegmentlineto{lineto}%
 \def\pgf@nfold@inputsegmentcurveto{curveto}%
@@ -647,7 +811,8 @@
   \let\pgf@nfold@currentinputsegmentobjects\pgf@nfold@inputsegmentobjects%
 %  \let\pgf@nfold@transformtoinputsegment\pgfutil@empty% we may need this one for closepath
   \pgf@nfold@getnextinputsegmentobject\pgf@nfold@nextinputsegmentobject%
-  \def\pgf@nfold@cur@endangle{0.0} % put in some default value so \pgf@nfold@previous@endangle is not undefined
+  \let\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentfirst%
+  \def\pgf@nfold@cur@endangle{0.0}% put in some default value so \pgf@nfold@previous@endangle is not undefined
   \pgf@nfold@traversepath@
 }
 
@@ -784,6 +949,7 @@
   \pgfscope% must use a scope, otherwise we break the arrow tips
     \pgfprocessround{\cachedpath}{\cachedpath}% remove tokens from the soft path
     \pgf@nfold@parsesoftpath{\cachedpath}{\parsedsoftpath}
+    \pgf@nfold@parsearrows
     % Compute the full and constituent part line widths
     \pgfutil@tempdima=\pgflinewidth\relax%
     \pgfutil@tempdimb=\pgfutil@tempdima\relax%
