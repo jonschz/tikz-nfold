@@ -849,11 +849,14 @@
   % The computed angles are values between 0 and 360, so their difference is between 360 and -360;
   % we want the difference to be between -180 and 180
   % This can also be done using one \pgfmathparse and Mod, but this is more efficient
-	% TODO drop \pgfmathparse
   \ifdim\pgfmathresult pt<-180pt\relax
-    \pgfmathparse{\pgfmathresult+360}
+    \pgfutil@tempdima=\pgfmathresult pt
+    \advance\pgfutil@tempdima by 360pt
+    \edef\pgfmathresult{\pgf@sys@tonumber\pgfutil@tempdima}
   \else\ifdim\pgfmathresult pt>180pt\relax
-    \pgfmathparse{\pgfmathresult-360}
+    \pgfutil@tempdima=\pgfmathresult pt
+    \advance\pgfutil@tempdima by -360pt
+    \edef\pgfmathresult{\pgf@sys@tonumber\pgfutil@tempdima}
   \fi\fi
 }
 
@@ -902,24 +905,6 @@
 % Iterating over the parsed soft path
 % -----------------------------------
 %
-
-
-% TODO Remove test code
-% Test code: Render the path without offsetting
-\def\pgf@nfold@handlesegment@stock{
-  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentmoveto
-    \pgfpathmoveto{\pgf@nfold@inputsegment@last}
-  \fi
-  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlineto
-    \pgfpathlineto{\pgf@nfold@inputsegment@last}
-  \fi
-  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto
-    \pgfpathcurveto{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@inputsegment@last}
-  \fi
-  \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentclosepath
-    \pgfpathclose
-  \fi
-}
 
 \newcount\pgf@nfold@index
 \def\pgf@nfold@run@loop{%
