@@ -149,6 +149,14 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \draw[red, double distance=.32cm, nfold=2, opacity=.5] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
 \end{tikzpicture}
 
+\subsection{Key \texttt{/tikz/scaling nfold}}
+
+\begin{tikzpicture}
+  % wrong way round disables scaling
+  \draw[double equal sign distance, nfold, arrows=-Implies, green, opacity=.5] (0,0) -- (1,0);
+  \draw[double equal sign distance, scaling nfold=4, arrows=-Implies, purple, opacity=.5] (0,0) -- (1,0);
+\end{tikzpicture}
+
 \subsection{Checking for undesired global effects}
 
 \begin{tikzpicture}[line join=miter, miter limit=10, x={(1.1cm,0)}, y={(0,1.1cm)}]
@@ -175,7 +183,7 @@ The desynchronisation in the latter case is a fundamental limitation of this app
     & a_6 \ar[d, Rightarrow, double distance=10pt, nfold=6]
     & a_7 \ar[d, Rightarrow, double distance=10pt, nfold=7]
     \\
-  b_2 \ar[r, Mapsto, nfold] \ar[r, Mapsto, color=green, opacity=.5] & b_3 \ar[r, Mapsto, double distance=3pt, nfold=3] & b_4 \ar[r, Mapsfrom, nfold=3] & b_5 & b_6 & b_7
+  b_2 \ar[r, Mapsto, color=green, opacity=.5]  \ar[r, Mapsto, nfold, purple, opacity=.5] & b_3 \ar[r, Mapsto, double distance=3pt, nfold=3] & b_4 \ar[r, Mapsfrom, nfold=3] & b_5 & b_6 & b_7
 \end{tikzcd}
 
 

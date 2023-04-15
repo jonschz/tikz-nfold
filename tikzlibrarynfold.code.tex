@@ -402,7 +402,6 @@
       \fi%
     \fi
   \fi
-  % TODO rename: In the next pass, this is the old end point, shortened to make room for the join
   % Step 4: Extend into the arrow tip at the end (if present)
   \ifx\pgf@nfold@next@segmenttype\pgf@nfold@inputsegmentlast%
     \ifnum\pgf@nfold@end@arrowcode=1
@@ -962,7 +961,25 @@
     \fi%
   },
   /pgf/nfold/.default=2,
-  /tikz/nfold/.forward to=/pgf/nfold
+  /tikz/nfold/.forward to=/pgf/nfold,
+  % TODO add scaling nfold to documentation
+  /tikz/scaling nfold/.code={%
+    \pgfscope% scope to contain \tikz@double@setup
+      \tikz@double@setup
+      % extract double distance between line centers
+      \pgf@x=\pgfinnerlinewidth\relax
+      \advance\pgf@x by\pgflinewidth\relax
+      \pgf@x=.5\pgf@x
+      \c@pgf@counta=#1
+      % multiply by (order-1)
+      \advance\c@pgf@counta by -1\relax
+      \global\pgf@x=\c@pgf@counta\pgf@x
+    \endpgfscope
+    \pgfkeys{
+      /tikz/double distance between line centers=\pgf@x,
+      /tikz/nfold=#1
+    }
+  },
 }
 
 \endinput
