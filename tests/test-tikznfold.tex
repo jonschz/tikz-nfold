@@ -157,6 +157,15 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \draw[double equal sign distance, scaling nfold=4, arrows=-Implies, purple, opacity=.5] (0,0) -- (1,0);
 \end{tikzpicture}
 
+
+\subsection{nfold path and nodes with \texttt{draw}}
+
+This used to be an issue and is the reason why \texttt{/tikz/nfold} redefines \verb"\tikz@double@setup" instead of modifying \verb"\pgf@nfold@order" directly:
+
+\begin{tikzpicture}
+  \draw[double equal sign distance, nfold=3] (0, 0) -- (1,0) node[midway, draw, label={[draw]a}] {};
+\end{tikzpicture}
+
 \subsection{Checking for undesired global effects}
 
 \begin{tikzpicture}[line join=miter, miter limit=10, x={(1.1cm,0)}, y={(0,1.1cm)}]

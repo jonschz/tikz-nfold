@@ -352,7 +352,7 @@
       \fi
     \fi
   \fi% end if current segment visible
-  % Step 2.2: Store where the current end point was relocated
+  % Step 2.2: Store where the current (non-offset) end point was relocated
   % in order to make space for the end join. This will be used
   % when wed draw the join at the start of the next segment
   \ifx\pgf@nfold@next@inputsegment\pgf@nfold@inputsegmentmoveto\else
@@ -589,7 +589,7 @@
 %
 
 \newcount\pgf@nfold@order
-\pgf@nfold@order=0
+\pgf@nfold@order=1
 
 \def\pgf@nfold@preparenfoldpath{%
   \ifnum\pgf@nfold@order>1\relax
@@ -929,20 +929,27 @@
   \pgf@up@action%
 }
 
+% Computes both the width of the component lines into \pgf@x and the distance
+% from the center to the outermost line centers into \pgf@y
+% from the current values of \pgflinewidth and \pgfinnerlinewidth.
+\def\pgf@nfold@compute@widths@from@double{
+    \pgf@x=\pgflinewidth\relax%
+    \pgf@y=\pgf@x\relax%
+    \advance\pgf@x-\pgfinnerlinewidth\relax%
+    \advance\pgf@y+\pgfinnerlinewidth\relax%
+    \pgf@x=.5\pgf@x\relax%
+    \pgf@y=.25\pgf@y\relax%
+}
+
 \def\pgf@nfold@render@cached@softpath{%
   \pgfscope% must use a scope, otherwise we break the arrow tips
     \pgfprocessround{\cachedpath}{\cachedpath}% remove tokens from the soft path
     \pgf@nfold@parsesoftpath{\cachedpath}{\parsedsoftpath}
     \pgf@nfold@parsearrows
     % Compute the full and constituent part line widths
-    \pgfutil@tempdima=\pgflinewidth\relax%
-    \pgfutil@tempdimb=\pgfutil@tempdima\relax%
-    \advance\pgfutil@tempdima-\pgfinnerlinewidth\relax%
-    \advance\pgfutil@tempdimb+\pgfinnerlinewidth\relax%
-    \pgfutil@tempdima=.5\pgfutil@tempdima\relax%
-    \pgfutil@tempdimb=.25\pgfutil@tempdimb\relax%
-    \pgfsetlinewidth\pgfutil@tempdima%
-    \edef\pgf@decoration@nfold@hwidth{\the\pgfutil@tempdimb}
+    \pgf@nfold@compute@widths@from@double%
+    \pgfsetlinewidth\pgf@x%
+    \edef\pgf@decoration@nfold@hwidth{\the\pgf@y}
     \pgf@nfold@run@loop
   \endpgfscope
 }
@@ -956,30 +963,42 @@
 \pgfkeys{
   /pgf/nfold/.code={%
     \pgf@nfold@order=#1\relax%
-    \ifnum\pgf@nfold@order<2\relax%
-      \pgferror{'nfold' must take a value of at least 2, got \the\pgf@nfold@order}%
+    \ifnum\pgf@nfold@order<1\relax%
+      \pgferror{'nfold' must take a value of at least 1, got \the\pgf@nfold@order}%
     \fi%
   },
-  /pgf/nfold/.default=2,
-  /tikz/nfold/.forward to=/pgf/nfold,
+  /pgf/nfold/.default=2
+}
+
+
+% use \tikzset for scoping reasons, does not appear to be equivalent to \pgfset{/tikz/...=...}
+\tikzset{
+  nfold/.code={
+    \edef\pgf@tmp{\noexpand\pgfkeys{/pgf/nfold=#1}}
+    % patch \tikz@double@setup to set /pgf/nfold=#1 as well
+    \expandafter\expandafter\expandafter\def%
+      \expandafter\expandafter\expandafter\tikz@double@setup%
+      \expandafter\expandafter\expandafter{\expandafter\tikz@double@setup\pgf@tmp}
+  },
+  nfold/.default=2,
   % TODO add scaling nfold to documentation
-  /tikz/scaling nfold/.code={%
+  scaling nfold/.code={%
     \pgfscope% scope to contain \tikz@double@setup
       \tikz@double@setup
-      % extract double distance between line centers
-      \pgf@x=\pgfinnerlinewidth\relax
-      \advance\pgf@x by\pgflinewidth\relax
-      \pgf@x=.5\pgf@x
+      % extract double distance between line centers into \pgf@x
+      \pgf@nfold@compute@widths@from@double
+      \pgf@y=2\pgf@y
+      % store (order-1)*\pgf@x in \pgf@xa
       \c@pgf@counta=#1
-      % multiply by (order-1)
       \advance\c@pgf@counta by -1\relax
-      \global\pgf@x=\c@pgf@counta\pgf@x
+      \global\pgf@y=\c@pgf@counta\pgf@y
     \endpgfscope
-    \pgfkeys{
-      /tikz/double distance between line centers=\pgf@x,
-      /tikz/nfold=#1
+    \tikzset{
+      double distance between line centers=\pgf@y,
+      nfold=#1
     }
   },
+  scaling nfold/.default=2,
 }
 
 \endinput
