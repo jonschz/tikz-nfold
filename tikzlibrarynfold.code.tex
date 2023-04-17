@@ -999,6 +999,31 @@
     }
   },
   scaling nfold/.default=2,
+  % This simply defines the key if tikzcd is not loaded, so we don't run into any errors
+  commutative diagrams/scaling nfold/.code={
+    \pgfscope% scope to contain \tikz@double@setup
+      \tikz@double@setup
+      % extract double distance between line centers into \pgf@x
+      \pgf@nfold@compute@widths@from@double
+      % store (order-1)*\pgf@y in \pgf@ya
+      \c@pgf@counta=#1
+      \advance\c@pgf@counta by -1\relax
+      \pgf@ya=\c@pgf@counta\pgf@y
+      % compute the label offset, which is (order-2)*\pgf@y + .5*\pgf@x
+      \advance\c@pgf@counta by -1\relax
+      \pgf@xa=\c@pgf@counta\pgf@y
+      \advance\pgf@xa by .5\pgf@x
+      % save the results in \pgf@x and \pgf@y
+      \global\pgf@x=\pgf@xa
+      \global\pgf@y=2\pgf@ya
+    \endpgfscope
+    \tikzset{
+      commutative diagrams/every label/.append style/.expanded={outer sep=\the\pgf@x},
+      double distance between line centers=\pgf@y,
+      nfold=#1
+    }
+  },
+  commutative diagrams/scaling nfold/.default=2
 }
 
 \endinput

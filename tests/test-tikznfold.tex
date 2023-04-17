@@ -195,6 +195,23 @@ This used to be an issue and is the reason why \texttt{/tikz/nfold} redefines \v
   b_2 \ar[r, Mapsto, color=green, opacity=.5]  \ar[r, Mapsto, nfold, purple, opacity=.5] & b_3 \ar[r, Mapsto, double distance=3pt, nfold=3] & b_4 \ar[r, Mapsfrom, nfold=3] & b_5 & b_6 & b_7
 \end{tikzcd}
 
+\subsection{Scaling test}
+
+\begin{tikzcd}[row sep=1.5cm]
+      a_2 \ar[d, Rightarrow, scaling nfold, "b", "a"']
+      \ar[d, purple, opacity=.5, Rightarrow, "b", "a"']
+    & a_3 \ar[d, Rightarrow, scaling nfold=3, "b", "a"']
+    & a_4 \ar[d, Rightarrow, scaling nfold=4, "b", "a"']
+      \ar[d, purple, opacity=.5, Rightarrow, nfold]
+    & a_5 \ar[d, Rightarrow, scaling nfold=5, "b", "a"']
+    & a_6 \ar[d, Rightarrow, scaling nfold=6, "b", "a"']
+      \ar[d, purple, opacity=.5, Rightarrow, nfold]
+    & a_7 \ar[d, Rightarrow, scaling nfold=7, "b", "a"'] \\
+  b_2 \ar[r, Mapsto, color=green, opacity=.5]  \ar[r, Mapsto, nfold, purple, opacity=.5] & b_3 \ar[r, Mapsto, double distance=3pt, nfold=3] & b_4 \ar[r, Mapsfrom, nfold=3] & b_5 & b_6 & b_7
+\end{tikzcd}
+
+
+\subsection{Testing compatibility with various features}
 
 \newcommand{\testarrow}[2]{
   \def\testoptions##1{[##1]}
