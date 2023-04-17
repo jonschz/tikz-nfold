@@ -27,11 +27,11 @@
 {
   \makeatletter
   \def\clearerrormsg{\let\errormsg\pgfutil@empty}
-  \renewcommand{\pgfwarning}[1]{
+  \renewcommand{\pgfutil@packagewarning}[2]{
     \ifx\errormsg\pgfutil@empty
-      \xdef\errormsg{#1}
+      \xdef\errormsg{#2}
     \else
-      \xdef\errormsg{\errormsg; #1}
+      \xdef\errormsg{\errormsg; #2}
     \fi
   }
   \makeatother
@@ -157,14 +157,15 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \draw[double equal sign distance, scaling nfold=4, arrows=-Implies, purple, opacity=.5] (0,0) -- (1,0);
 \end{tikzpicture}
 
-
 \subsection{nfold path and nodes with \texttt{draw}}
 
-This used to be an issue and is the reason why \texttt{/tikz/nfold} redefines \verb"\tikz@double@setup" instead of modifying \verb"\pgf@nfold@order" directly:
+% TODO add to known issues: nfold must be set after double distance
 
+This used to be an issue and is the reason why \texttt{/tikz/nfold} redefines \verb"\tikz@double@setup" instead of modifying \verb"\pgf@nfold@order" directly:\\
 \begin{tikzpicture}
   \draw[double equal sign distance, nfold=3] (0, 0) -- (1,0) node[midway, draw, label={[draw]a}] {};
-\end{tikzpicture}
+\end{tikzpicture}\\
+If \texttt{/tikz/nfold} were to set \verb"\pgf@nfold@order" directly, TikZ would attempt to render the boundary of the nodes with \texttt{nfold} enabled, which results in an error.
 
 \subsection{Checking for undesired global effects}
 

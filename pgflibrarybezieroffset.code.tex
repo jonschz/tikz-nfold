@@ -184,7 +184,7 @@
   \ifdim\pgf@tmp@secantlen pt<0.1pt\relax
     % Edge case: Either the curve is degenerate to a point or it is not simple.
     % Either way we offset A1 and A4, and preserve the vectors A1A2 and A3A4.
-    \pgfwarning{pgf-offset: first and last point are too close, expect glitches}%
+    \pgfutil@packagewarning{tikz-nfold}{first and last point are too close, expect glitches}%
     \pgfextract@process\pgf@bezier@offset@ii
       {\pgfpointadd{\pgf@bezier@offset@i}{\pgfpointdiff{#1}{#2}}}%
     \pgfextract@process\pgf@bezier@offset@iii
@@ -194,7 +194,7 @@
     \pgfmathcrossdot{}{\pgf@tmp@tang@ii}%
      \ifdim\pgf@tmp@dot pt<.5pt\relax%
        % this can only happen in non-simple curves
-       \pgfwarning{pgf-offset: cosine of \pgf@tmp@dot\space clamped to 0.5 in non-simple segment}%
+       \pgfutil@packagewarning{tikz-nfold}{cosine of \pgf@tmp@dot\space clamped to 0.5 in non-simple segment}%
        \def\pgf@tmp@dot{.5}%
     \fi%
     \pgfmathdivide@{\pgf@tmp@cross}{\pgf@tmp@dot}%
@@ -211,7 +211,7 @@
     % third control point
     \pgfmathcrossdot{\pgf@tmp@secant}{\pgf@tmp@tang@i}%
     \ifdim\pgf@tmp@dot pt<.5pt\relax
-      \pgfwarning{pgf-offset: cosine of \pgf@tmp@dot\space clamped to 0.5 in non-simple segment}%
+      \pgfutil@packagewarning{tikz-nfold}{cosine of \pgf@tmp@dot\space clamped to 0.5 in non-simple segment}%
       \def\pgf@tmp@dot{.5}%
     \fi
     \pgfmathdivide@{\pgf@tmp@cross}{\pgf@tmp@dot}%
@@ -354,7 +354,7 @@
     \ifpgf@offset@subdivide%
       \ifnum\c@pgf@counta<0%
         % We hit the recursion limit but the segment is not simple
-        \pgfwarning{pgf-offset: Recursion limit reached, glitches may occur. %
+        \pgfutil@packagewarning{tikz-nfold}{Recursion limit reached, glitches may occur. %
           Consider increasing \string\pgf@offset@max@recursion}%
         % Try to offset the curve anyway. The result will not be precise,
         % but the code is sufficiently robust to not crash

@@ -287,7 +287,7 @@
       \pgfmathparse{abs(\pgf@nfold@deltaphi@start) > 178}
       \ifnum\pgfmathresult=1\relax
         % we go full backwards, don't relocate the start and disable the join to avoid division by zero
-        \pgfwarning{Angle too sharp in 'nfold', expect visual errors}
+        \pgfutil@packagewarning{tikz-nfold}{Angle too sharp, expect visual errors}
         \pgf@nfold@angletoosharptrue
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenstartjoin}%
@@ -303,7 +303,7 @@
       \pgfmathparse{abs(\pgf@nfold@deltaphi@end) > 178}
       \ifnum\pgfmathresult=1\relax
         % we go full backwards, don't relocate the start
-        \pgfwarning{Angle too sharp in 'nfold', expect visual errors}
+        \pgfutil@packagewarning{tikz-nfold}{Angle too sharp, expect visual errors}
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenendjoin}%
           {\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@nfold@deltaphi@end))}
@@ -376,7 +376,7 @@
     % Idea: when parsing the path, add a detection if there is a closepath at the current segment,
     % then cache the data of the last segment.
     % We could then insert a "fake previous segment" into the path at the right place
-    \pgfwarning{'nfold': The option 'cycle' is not yet properly supported.}
+    \pgfutil@packagewarning{tikz-nfold}{The option 'cycle' is not yet properly supported}
     \pgfpathclose
 % TODO Old code, likely no longer needed
 %      \ifpgf@nfold@continuesegment
@@ -458,7 +458,7 @@
         \expandafter\xdef\csname tikz@arrow@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname{\noexpand\pgfqpoint{\the\pgf@x}{\the\pgf@y}}
       \else
         % this is a failsafe and should never be reached
-        \pgfwarning{'nfold': did not find intersection}
+        \pgfutil@packagewarning{tikz-nfold}{did not find intersection}
         \pgfextract@process\pgf@nfold@arrowintersect{\pgfqpoint{0pt}{\pgf@shiftdec@fraction pt}}%
       \fi
     \fi% if precomputed
@@ -501,7 +501,7 @@
   \else\if#1e
     \pgfpathlineto{\pgf@nfold@arrowintersect}
   \else
-    \pgferror{Invalid argument to \string\pgf@nfold@extendtotip: \meaning#1}
+    \pgfutil@packageerror{tikz-nfold}{Invalid argument to \string\pgf@nfold@extendtotip: \meaning#1}{}
   \fi\fi
   \pgftransformreset
 \fi\fi% if 1 < i < nArrows
@@ -600,7 +600,7 @@
       \pgfsyssoftpath@getcurrentpath\cachedpath%
       \pgfsyssoftpath@setcurrentpath\pgfutil@empty%
     \else
-      \pgferror{TODO: This is probably the error "must enable /tikz/double to use nfold"; can this occur under different circumstances?}
+      \pgfutil@packageerror{tikz-nfold}{TODO: This is probably the error "must enable /tikz/double to use nfold"; can this occur under different circumstances?}{}
     \fi
   \fi
 }
@@ -608,7 +608,7 @@
 \let\pgf@nfold@old@path@check@proper\pgf@path@check@proper
 \def\pgf@path@check@proper{%
   \pgf@nfold@old@path@check@proper%
-  \ifpgfutil@tempswa\else
+  \ifpgfutil@tempswa\else%
     % if \pgfutil@tempswa is false, this is the last macro we can overwrite before the draw call.
     % Otherwise, we inject into \pgf@prepare@start@of@path%
     \pgf@nfold@preparenfoldpath%
@@ -678,7 +678,7 @@
 %            \ifx#1\pgfsyssoftpath@rectcornertoken%
 %              \let\pgf@next\pgf@nfold@parserect%
 %            \else%
-%              \pgferror{Unrecognised soft path token `#1'}%
+%              \pgfutil@packageerror{tikz-nfold}{Unrecognised soft path token `#1'}{}%
 %            \fi%
           \fi%
         \fi%
@@ -964,7 +964,7 @@
   /pgf/nfold/.code={%
     \pgf@nfold@order=#1\relax%
     \ifnum\pgf@nfold@order<1\relax%
-      \pgferror{'nfold' must take a value of at least 1, got \the\pgf@nfold@order}%
+      \pgfutil@packageerror{tikz-nfold}{'nfold' must take a value of at least 1, got \the\pgf@nfold@order}{}%
     \fi%
   },
   /pgf/nfold/.default=2
