@@ -584,8 +584,10 @@
 % cache and delete the current softpath (so the call to \pgfsyssoftpath@invokecurrentpath has no effect), then we
 % restore and offset the cached softpath in \pgf@stroke@inner@line.
 %
-% TODO: The only other places where \pgf@path@check@proper and \pgf@prepare@start@of@path show up is in
-% \pgf@up@draw@arrows@only; we must make sure that this call remains unmodified. Further changes are likely necessary.
+% The macros \pgf@path@check@proper and \pgf@prepare@start@of@path are also used in \pgf@up@draw@arrows@only,
+% so we must make sure that the latter is unaffected by the modifications. Luckily, this turns out not to be
+% a problem - the only macros that are called after the modified ones are \pgf@add@arrow@at@start and
+% \pgf@add@arrow@at@end, which do not change their behaviour even if we modify the paths.
 %
 
 \newcount\pgf@nfold@order
