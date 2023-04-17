@@ -730,7 +730,7 @@
   \pgfoffset@abssum\pgf@xa
   \ifdim\pgf@xa>.1pt\relax
     \edef\pgf@nfold@temp{%
-      \noexpand\pgf@nfold@inputsegmentobject@lineto{0 pt}{\pgfpoint@nfold@lastparsed}{\pgf@x#1\pgf@y#2}%
+      \noexpand\pgf@nfold@inputsegmentobject@lineto{\pgfpoint@nfold@lastparsed}{\pgf@x#1\pgf@y#2}%
     }%
     \edef\pgfpoint@nfold@lastparsed{\pgf@x#1\pgf@y#2}%
     \let\pgfpoint@nfold@lastnonmovetoparsed\pgfpoint@nfold@lastparsed%
@@ -740,10 +740,8 @@
 }%
 
 \def\pgf@nfold@parsecurveto#1#2\pgfsyssoftpath@curvetosupportbtoken#3#4\pgfsyssoftpath@curvetotoken#5#6{%
-%  \pgf@decorate@curvelength{\pgfpoint@decorate@lastparsed}{\pgf@x#1\pgf@y#2}{\pgf@x#3\pgf@y#4}{\pgf@x#5\pgf@y#6}%
-%  \advance\pgfutil@tempdima\pgfmathresult pt\relax%
   \edef\pgf@nfold@temp{%
-    \noexpand\pgf@nfold@inputsegmentobject@curveto{0 pt}{\pgfpoint@nfold@lastparsed}%
+    \noexpand\pgf@nfold@inputsegmentobject@curveto{\pgfpoint@nfold@lastparsed}%
       {\pgf@x#1\pgf@y#2}{\pgf@x#3\pgf@y#4}{\pgf@x#5\pgf@y#6}%
   }%
   \expandafter\pgf@nfold@addtoinputsegmentobjects\expandafter{\pgf@nfold@temp}%
@@ -754,7 +752,7 @@
 
 \def\pgf@nfold@parseclosepath#1#2{%
   \edef\pgf@nfold@temp{%
-    \noexpand\pgf@nfold@inputsegmentobject@closepath{0 pt}{\pgfpoint@nfold@lastparsed}{\pgf@x#1\pgf@y#2}%
+    \noexpand\pgf@nfold@inputsegmentobject@closepath{\pgfpoint@nfold@lastparsed}{\pgf@x#1\pgf@y#2}%
   }%
   \let\pgfpoint@nfold@lastnonmovetoparsed\pgfpoint@nfold@lastparsed%
   \expandafter\pgf@nfold@addtoinputsegmentobjects\expandafter{\pgf@nfold@temp}%
@@ -800,26 +798,23 @@
   \let\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentmoveto%
 }%
 
-
-% TODO remove the #1 length parameter from all of these (and also above)
-
-\def\pgf@nfold@inputsegmentobject@lineto#1#2#3{%
-  \def\pgf@nfold@inputsegment@first{#2}%
-  \def\pgf@nfold@inputsegment@last{#3}%
+\def\pgf@nfold@inputsegmentobject@lineto#1#2{%
+  \def\pgf@nfold@inputsegment@first{#1}%
+  \def\pgf@nfold@inputsegment@last{#2}%
   \let\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlineto%
 }%
 
-\def\pgf@nfold@inputsegmentobject@curveto#1#2#3#4#5{%
-  \def\pgf@nfold@inputsegment@first{#2}%
-  \def\pgf@nfold@inputsegment@supporta{#3}%
-  \def\pgf@nfold@inputsegment@supportb{#4}%
-  \def\pgf@nfold@inputsegment@last{#5}%
+\def\pgf@nfold@inputsegmentobject@curveto#1#2#3#4{%
+  \def\pgf@nfold@inputsegment@first{#1}%
+  \def\pgf@nfold@inputsegment@supporta{#2}%
+  \def\pgf@nfold@inputsegment@supportb{#3}%
+  \def\pgf@nfold@inputsegment@last{#4}%
   \let\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto%
 }%
 
-\def\pgf@nfold@inputsegmentobject@closepath#1#2#3{%
-  \def\pgf@nfold@inputsegment@first{#2}%
-  \def\pgf@nfold@inputsegment@last{#3}%
+\def\pgf@nfold@inputsegmentobject@closepath#1#2{%
+  \def\pgf@nfold@inputsegment@first{#1}%
+  \def\pgf@nfold@inputsegment@last{#2}%
   \let\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentclosepath%
 }%
 
