@@ -167,6 +167,42 @@ This used to be an issue and is the reason why \texttt{/tikz/nfold} redefines \v
 \end{tikzpicture}\\
 If \texttt{/tikz/nfold} were to set \verb"\pgf@nfold@order" directly, TikZ would attempt to render the boundary of the nodes with \texttt{nfold} enabled, which results in an error.
 
+
+\subsection{Saving and offsetting a soft path}
+
+\subsubsection{Using \textbackslash pgfoffsetpath}
+\begin{tikzpicture}[line join=bevel]%
+  \path[save path=\savedpath] (0,0) -- (.75,0) to[out=0, in=-90] (1,1.25) -- (2,1);
+  \pgfoffsetpath{\savedpath}{0pt}
+  \color{black}
+  \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{3pt}
+  \color{red}
+  \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{6pt}
+  \color{blue}
+  \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{-3pt}
+  \color{green}
+  \pgfusepathqstroke
+\end{tikzpicture}
+
+\subsubsection{Using methods that scale correctly}
+\begin{tikzpicture}[line join=bevel]%
+  \path[draw=gray, save path=\savedpath] (0,0) -- (1,0) to[out=0, in=-90] (1,1.25) -- (2,1);
+  % Note how the path offset by 0 differs from the original path
+  \pgfoffsetpathfraction{\savedpath}{6pt}{0}
+  \color{black}
+  \pgfusepathqstroke
+  \pgfoffsetpathqfraction{\savedpath}{6pt}{.5}
+  \color{red}
+  \pgfusepathqstroke
+  \pgfoffsetpathindex{\savedpath}{6pt}{2}{5}
+  \color{blue}
+  \pgfusepathqstroke
+\end{tikzpicture}
+
+
 \subsection{Checking for undesired global effects}
 
 \begin{tikzpicture}[line join=miter, miter limit=10, x={(1.1cm,0)}, y={(0,1.1cm)}]

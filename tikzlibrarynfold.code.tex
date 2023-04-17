@@ -257,9 +257,7 @@
 \newif\ifpgf@nfold@angletoosharp
 
 
-
-% TODO rename
-\def\pgf@nfold@handlesegment@testoffset{%
+\def\pgf@nfold@handlesegment{%
   %%% Step 0: Preparation
   % Set some default values; they might get overwritten later
   \let\pgf@nfold@segment@start\pgf@nfold@inputsegment@first
@@ -517,6 +515,10 @@
 % However, in other cases (like tikz-cd) we may find 
 %   \pgf@arrow@handle@shorthand@empty {\csname pgf@ar@means@tikzcd implies cap\endcsname }
 % In such cases we must expand the first parameter once and then match as above.
+
+% Set global defaults
+\def\pgf@nfold@start@arrowcode{0}
+\def\pgf@nfold@end@arrowcode{0}
 
 \def\pgf@nfold@parsearrows{
   \ifpgfutil@tempswa% this is set in \pgfusepath and stores whether we draw arrow tips at all
@@ -821,7 +823,7 @@
 \def\pgf@nfold@traversepath@{
   \pgf@nfold@processnextinputsegmentobject%
   \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlast\else
-    \pgf@nfold@handlesegmentmacro%
+    \pgf@nfold@handlesegment%
   \fi%
   \ifx\pgf@nfold@currentinputsegmentobjects\pgfutil@empty%
     \let\pgf@next\relax%
@@ -925,7 +927,6 @@
   \pgfmathsetmacro{\pgf@shiftdec@fraction}%
     {-1+2*(\pgf@nfold@index-1)/(\pgf@nfold@order-1)}
   \pgfmathsetlengthmacro{\pgf@shiftdec@amount}{\pgf@decoration@nfold@hwidth*\pgf@shiftdec@fraction}
-  \let\pgf@nfold@handlesegmentmacro\pgf@nfold@handlesegment@testoffset
   \pgf@nfold@traversepath%
   \pgfsyssoftpath@flushcurrentpath%
   \pgf@up@action%
@@ -958,15 +959,68 @@
 
 
 %
-% pgf keys / user interface
-% -------------------------
+% user interface and pgf/TikZ keys
+% --------------------------------
 %
+
+% Outputs a provided soft path in #1 offset by a distance provided in #2.
+\def\pgfoffsetpath#1#2{%
+  \begingroup
+    \pgfmathsetlengthmacro\pgf@decoration@nfold@hwidth{#2}
+    % \pgf@decoration@nfold@hwidth must always be positive
+    \pgf@x=\pgf@decoration@nfold@hwidth\relax
+    \ifdim\pgf@x<0pt\relax
+      \pgf@x=-\pgf@x
+      \def\pgf@shiftdec@fraction{-1}
+    \else
+      \def\pgf@shiftdec@fraction{1}
+    \fi
+    \edef\pgf@decoration@nfold@hwidth{\the\pgf@x}
+    \pgfoffsetpathqfraction{#1}{\pgf@decoration@nfold@hwidth}{\pgf@shiftdec@fraction}
+  \endgroup
+}
+
+% Outputs a provided soft path in #1 offset by #3*#2 where #2 is a length (>= 0 pt)
+% and #3 is a number between -1.0 and 1.0. This differs from \pgfoffsetpath{#1}{#2*#3} 
+% in how the joins between segments are rendered.  In particular, \pgfoffsetpathfraction{#1}{10pt}{0}
+% does *not* yield the original path, but a new path in the centre of #1 drawn at line width 20pt.
+%
+\def\pgfoffsetpathfraction#1#2#3{%
+  \begingroup
+    \pgfmathsetlengthmacro\pgf@decoration@nfold@hwidth{#2}
+    \pgfmathsetmacro\pgf@shiftdec@fraction{#3}
+    \pgfoffsetpathqfraction{#1}{\pgf@decoration@nfold@hwidth}{\pgf@shiftdec@fraction}
+  \endgroup
+}
+
+% This has the same output as the #3-th segment of nfold=#4.
+\def\pgfoffsetpathindex#1#2#3#4{%
+  \begingroup
+    \pgfmathsetmacro\pgf@shiftdec@fraction{-1+2*(#3-1)/(#4-1)}
+    \pgfoffsetpathqfraction{#1}{#2}{\pgf@shiftdec@fraction}
+  \endgroup
+}
+
+% A quick version that skips processing the input values
+\def\pgfoffsetpathqfraction#1#2#3{%
+  \begingroup
+    \pgfprocessround{#1}{\cachedpath}% remove tokens from the soft path
+    \pgf@nfold@parsesoftpath{\cachedpath}{\parsedsoftpath}
+    \pgf@x=#2\relax
+    \edef\pgf@decoration@nfold@hwidth{\the\pgf@x}
+    \edef\pgf@shiftdec@fraction{#3}
+    \pgf@x=\pgf@shiftdec@fraction\pgf@x\relax
+    \edef\pgf@shiftdec@amount{\the\pgf@x}
+    \pgf@nfold@traversepath%
+  \endgroup
+}
+
 
 \pgfkeys{
   /pgf/nfold/.code={%
     \pgf@nfold@order=#1\relax%
     \ifnum\pgf@nfold@order<1\relax%
-      \pgfutil@packageerror{tikz-nfold}{'nfold' must take a value of at least 1, got \the\pgf@nfold@order}{}%
+      \pgfutil@packageerror{tikz-nfold}{The key /pgf/nfold must take a value of at least 1, got \the\pgf@nfold@order}{}%
     \fi%
   },
   /pgf/nfold/.default=2
