@@ -30,7 +30,6 @@
 % - globally rename \pgf@shiftdec@amount
 % - globally rename \pgf@decoration@nfold@hwidth
 % - can we remove some or all of \global, \gdef, \xdef now?
-% - Make sure we don't break \pgf@up@draw@arrows@only
 % - new code: search for "deco" to see if we missed anything
 %
 %
@@ -47,9 +46,7 @@
 %   - /tikz/double (i.e. not doing anything)
 %   - Also: do the testing with nfold auto-set to 2 for a more realistic comparison with /tikz/double
 % - fix closepath
-% - update documentation
 % - branch + pull request
-% - Adapt the width of the bar in e.g. [arrows=|-Implies]
 
 
 
@@ -376,7 +373,7 @@
     % We could then insert a "fake previous segment" into the path at the right place
     \pgfutil@packagewarning{tikz-nfold}{The option 'cycle' is not yet properly supported}
     \pgfpathclose
-% TODO Old code, likely no longer needed
+% Old code, likely no longer needed
 %      \ifpgf@nfold@continuesegment
 %        \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
 %      \else
@@ -604,7 +601,7 @@
       \pgfsyssoftpath@getcurrentpath\cachedpath%
       \pgfsyssoftpath@setcurrentpath\pgfutil@empty%
     \else
-      \pgfutil@packageerror{tikz-nfold}{TODO: This is probably the error "must enable /tikz/double to use nfold"; can this occur under different circumstances?}{}
+      \pgfutil@packageerror{tikz-nfold}{Must set \string\pgfinnerlinewidth\space to use nfold, e.g. by setting /tikz/double distance}{}
     \fi
   \fi
 }
@@ -677,13 +674,12 @@
         \else%
           \ifx#1\pgfsyssoftpath@closepathtoken%
             \let\pgf@next\pgf@nfold@parseclosepath%
-% TODO test and implement rect's
-%          \else%
-%            \ifx#1\pgfsyssoftpath@rectcornertoken%
-%              \let\pgf@next\pgf@nfold@parserect%
-%            \else%
-%              \pgfutil@packageerror{tikz-nfold}{Unrecognised soft path token `#1'}{}%
-%            \fi%
+          \else%
+            \ifx#1\pgfsyssoftpath@rectcornertoken%
+              \let\pgf@next\pgf@nfold@parserect%
+            \else%
+              \pgfutil@packageerror{tikz-nfold}{Unrecognised soft path token `#1'}{}%
+            \fi%
           \fi%
         \fi%
       \fi%
@@ -691,6 +687,31 @@
   \fi%
   \pgf@next}%
 
+% Mostly for completeness sake; using TikZ' (0,0) rectangle (1,1) does not call this code
+\def\pgf@nfold@parserect#1#2\pgfsyssoftpath@rectsizetoken#3#4{%
+  \let\pgf@nfold@orig@@parsesoftpath\pgf@nfold@@parsesoftpath%
+  \let\pgf@nfold@@parsesoftpath\relax%
+  \pgf@nfold@parsemoveto{#1}{#2}%
+  \pgf@xb=#1\relax
+  \pgf@yb=#2\relax
+  \pgf@xc=#3\relax
+  \pgf@yc=#4\relax
+    \advance\pgf@yb\pgf@yc%
+    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
+    \expandafter\pgf@nfold@parselineto\pgf@temp%
+    \advance\pgf@xb\pgf@xc%
+    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
+    \expandafter\pgf@nfold@parselineto\pgf@temp%
+    \advance\pgf@yb-\pgf@yc%
+    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
+    \expandafter\pgf@nfold@parselineto\pgf@temp%
+    \advance\pgf@xb-\pgf@xc%
+    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
+    \expandafter\pgf@nfold@parselineto\pgf@temp%
+  \let\pgf@nfold@@parsesoftpath\pgf@nfold@orig@@parsesoftpath%
+  \edef\pgf@marshal{\noexpand\pgf@nfold@parsemoveto{\the\pgf@xb}{\the\pgf@yb}}%
+  \pgf@marshal%
+}
 
 \def\pgf@nfold@parsemoveto#1#2{%
   \def\pgf@nfold@queueinputsegmentobject{\pgf@nfold@inputsegmentobject@moveto{\pgf@x#1\pgf@y#2}}%
@@ -883,7 +904,6 @@
   \let\pgf@nfold@previous@endangle\pgf@nfold@cur@endangle%
   \let\pgf@nfold@currentinputsegmentobject\pgf@nfold@nextinputsegmentobject%
   \pgf@nfold@getnextinputsegmentobject\pgf@nfold@nextinputsegmentobject%
-  % TODO We may be able to optimise away redundant calls here in the future
   \pgf@nfold@nextinputsegmentobject% parse the *next* input segment so we can compute its angles
   \pgf@nfold@computeangles%
   \let\pgf@nfold@next@first\pgf@nfold@inputsegment@first%
@@ -893,6 +913,7 @@
   \let\pgf@nfold@next@segmenttype\pgf@nfold@currentinputsegment%
   \let\pgf@nfold@next@startangle\pgf@nfold@cur@startangle%
   \pgf@nfold@currentinputsegmentobject% get the current segment into \pgf@nfold@inputsegment@first etc.
+  % TODO possible optimisation: Reuse some values computed for the next segment
   \pgf@nfold@computeangles%
   % Compute the angle differences at the start and end (between -180 and +180 degrees)
   \pgfmathparse{\pgf@nfold@cur@startangle-\pgf@nfold@previous@endangle}
@@ -1037,7 +1058,6 @@
       \expandafter\expandafter\expandafter{\expandafter\tikz@double@setup\pgf@tmp}
   },
   nfold/.default=2,
-  % TODO add scaling nfold to documentation
   scaling nfold/.code={%
     \pgfscope% scope to contain \tikz@double@setup
       \tikz@double@setup

@@ -202,6 +202,19 @@ If \texttt{/tikz/nfold} were to set \verb"\pgf@nfold@order" directly, TikZ would
   \pgfusepathqstroke
 \end{tikzpicture}
 
+\subsection{Support for pgf rectangles}
+Note that this is \emph{not} called by TikZ' \texttt{rectangle} option.
+
+\begin{pgfpicture}%%%
+  \pgfpathmoveto{\pgfpoint{-1cm}{-1cm}}
+  \pgfpathlineto{\pgfpoint{1cm}{-1cm}}
+  \pgfpathrectangle{\pgfpointorigin}{\pgfpoint{20pt}{20pt}}
+  \pgfpathlineto{\pgfpoint{-1cm}{0cm}}
+  \pgfsetlinewidth{3pt}
+  \pgfsetinnerlinewidth{2pt}
+  \pgfusepath{stroke,nfold}
+\end{pgfpicture}
+
 
 \subsection{Checking for undesired global effects}
 
