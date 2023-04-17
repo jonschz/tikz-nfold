@@ -56,11 +56,11 @@
 \maketitle
 
 \begin{abstract}
-  This package provides an alternative to TikZ' \verb|/tikz/double| option, avoiding some shortcomings of the original approach. It also provides an option to draw triple, quadruple, and n-fold paths.
+  This package provides an alternative to TikZ' \verb|/tikz/double| option, avoiding some shortcomings of the original approach. It also provides an option to draw triple, quadruple, and n-fold paths, and furthermore allows exact offsetting of arbitrary paths.
 \end{abstract}
 
 \section*{Compatibility}
-This package has been tested with \texttt{pdflatex}, \texttt{lualatex} and \texttt{xelatex}. Support for plain \TeX{} could, in principle, be implemented in the future as well.
+This package has been tested with \texttt{pdflatex}, \texttt{lualatex} and \texttt{xelatex}. Plain \TeX{} has not been tested yet.
 
 \section{Quick start}
 
@@ -68,7 +68,7 @@ Add
 \begin{verbatim}
 \usetikzlibrary{nfold}
 \end{verbatim}
-to your preamble. Now you can add the style \tikznfold{} to any path that uses \tikzdouble:
+to your preamble. Now you can add \tikznfold{} to any path that uses \tikzdouble. Be sure to specify \verb|/tikz/double distance| before \tikznfold, as otherwise the latter will not be applied.
 
 \begin{tkzexample}[latex=4cm]
 \begin{tikzpicture}
@@ -80,7 +80,7 @@ to your preamble. Now you can add the style \tikznfold{} to any path that uses \
   \node[right] at (0,1) {nfold:};
 \end{tikzpicture}
 \end{tkzexample}
-While it appears that adding \nfold{} does not do much here, it avoids some rendering issues of \tikzdouble, hence I recommend using it in most cases (see \cref{subsec:doubleIssues} for details).
+While it appears that adding \nfold{} does not do much here, it avoids some rendering issues of \tikzdouble, hence I recommend using it in most cases (see \cref{sec:doubleIssues} for details).
 
 Specify a number for n-fold lines:
 \begin{tkzexample}[latex=4cm]
@@ -90,13 +90,26 @@ Specify a number for n-fold lines:
 \end{tikzpicture}
 \end{tkzexample}
 
-The arrow tips \texttt{Implies} and \texttt{Bar} are supported (the latter can also be aliased by \texttt{|}):
-\begin{tkzexample}[, latex=4cm]
+All arrow tips are supported, and there is special treatment for the \texttt{Implies} tip:
+\begin{tkzexample}[latex=4cm]
 \begin{tikzpicture}
-  \draw[double distance=7pt, nfold=5, arrows=Bar-Implies]
+  \draw[double distance=7pt, nfold=5,
+        arrows={Bar[width=18pt]-Implies[red]}]
     (0,1.5) to[bend left] (3,1.5);
   \draw[double distance=7pt, nfold=5, arrows=Implies-Implies]
     (0,0) to[bend left] (3,0);
+\end{tikzpicture}
+\end{tkzexample}
+
+Use \texttt{/tikz/scaling nfold} to preserve the distance between component lines instead of the overall width of the arrow:
+\begin{tkzexample}[latex=4cm,pre={\usetikzlibrary{intersections}}]
+\begin{tikzpicture}
+  \draw[double equal sign distance, nfold,
+        arrows=-Implies] (0,.75) -- (3,.75);
+  \draw[double equal sign distance, scaling nfold=4,
+        arrows=-Implies] (0,0) -- (3,0);
+  \draw[double equal sign distance, scaling nfold=6,
+        arrows=-Implies] (0,-1) -- (3,-1);
 \end{tikzpicture}
 \end{tkzexample}
 
@@ -112,17 +125,18 @@ Different line joins are supported:
 \end{tikzpicture}
 \end{tkzexample}
 
-There is also support for \texttt{tikz-cd}:
+There is also support for \texttt{tikz-cd} with custom label positions for \texttt{scaling nfold}:
 \begin{tkzexample}[pre={\usetikzlibrary{cd}}, latex=3cm]
 \begin{tikzcd}
-  a \ar[r, Rightarrow, bend right, nfold=3] &
-  b \ar[d, Mapsto, nfold=3, "\alpha", "\beta"'] \\
-  c \ar[r, Mapsfrom, double distance=4pt, nfold=4] &
+  a \ar[r, Mapsto, bend left, scaling nfold=3] &
+  b \ar[d, Rightarrow, nfold, "\alpha", "\beta"'] \\
+  c \ar[r, Mapsfrom, scaling nfold=4, "\gamma" near end] &
   d
 \end{tikzcd}
 \end{tkzexample}
 
 \section{Comparison to \tikzdouble}
+\label{sec:doubleIssues}
 
 This package does \emph{not} aim to supersede \tikzdouble, as both the original and the \nfold{} approach have their own strengths and weaknesses. The main difference is that \tikzdouble{} achieves its goal by drawing the original path twice, once very thick with the foreground colour and then slightly less thick with the background colour. By contrast, \nfold{} offsets the path:
 \begin{equation}
@@ -146,7 +160,6 @@ This package does \emph{not} aim to supersede \tikzdouble, as both the original 
 
 
 \subsection{Issues with \tikzdouble}
-\label{subsec:doubleIssues}
 While the approach of \tikzdouble{} is very robust and efficient, it does have a few pitfalls:
 \begin{itemize}
   \item Different types of visual glitches can occur in PDF renderers:
@@ -179,10 +192,21 @@ While the approach of \tikzdouble{} is very robust and efficient, it does have a
 \end{tkzexample}
   \item Triple and n-fold paths are not supported (although this could be implemented in principle).
 \end{itemize}
+However, there are still situations where \tikznfold{} struggles and \tikzdouble{} is the only viable option, which will be discussed in the next section.
 
-\subsection{Issues with \tikznfold}
+\section{Known issues}
 
-This package is far from perfect, and even if it were, there would still be some cases where the approach of \tikzdouble{} is better suited. Here are some shortcomings of \nfold:
+This package is far from perfect, and even if it were, there would still be some cases where the approach of \tikzdouble{} is better suited. The known issues are roughly sorted into those that can be fixed in principle and the fundamental limitations of this approach. If you find any bugs not listed here, please report them \href{https://github.com/jonschz/tikz-nfold/issues/}{here}.
+
+\subsection{Fixable / wish list}
+\begin{itemize}
+  \item \nfold{} is significantly slower than \tikzdouble. Part of the reason is that the construction is far more complex, but the code is also far from fully optimised.
+  \item Closing paths (i.e.\ using \texttt{-- cycle}) is not yet fully supported: The output will not be correct if the angle between the first and last segment differs from zero.
+  \item Some rare cases of curves are not offset correctly. The reasons for that are discussed below in \cref{subsec:subdivisionUsed}. Usually, slightly changing the control points or values of the curve will fix the problem. If you find any, please open an issue.
+  \item The offsetting algorithm could check the curvature (at least in the start and end point of a given simple curve) and throw warnings in case the curvature is too high for the amount by which the curve is supposed to be offset.
+\end{itemize}
+
+\subsection{Impossible or very hard to fix}
 \begin{itemize}
   \item \nfold{} struggles with high curvatures and wide paths: Let $\kappa(t)$ be the curvature of the path in a given point, and let $\texttt{double distance} = \alpha$. If $\kappa(t) > \frac{2}{\alpha}$ (i.e. the radius of the osculating circle is smaller than half the width of the path) for some $0 \leq t \leq 1$, the output of \nfold{} will not be correct:
 \begin{tkzexample}[latex=3.5cm]
@@ -195,30 +219,14 @@ This package is far from perfect, and even if it were, there would still be some
   \node[right] at (0,1) {nfold:};
 \end{tikzpicture}
 \end{tkzexample}
-  Some, but not all of these cases raise warnings (this feature is on the wish list).
-  \item Some rare cases of curves are not offset correctly. The reasons for that are discussed below in \cref{subsec:subdivisionUsed}. Usually, slightly changing the control points or values of the curve will fix the problem.
-  \item Closing paths (i.e.\ using \texttt{-- cycle}) is not yet supported (this feature is on the wish list).
-  \item \nfold{} is significantly slower than \tikzdouble. Part of the reason is that the construction is far more complex, other reasons can be fixed in principle. Specifically, the use of the \texttt{decorations} library is rather inefficient for this purpose.
-  \item While I did my best trying to break \nfold{} with as many of TikZ' options as possible, there are most definitely some problematic options I have not tested. If you find any bugs, please report them \href{https://github.com/jonschz/tikz-nfold/issues/}{here}.
-\end{itemize}
-
-
-\section{Known issues}
-
-\subsection{Fixable / wish list}
-
-\begin{itemize}
-  \item Closing paths (e.g.\ \texttt{-- cycle}) is not yet properly supported.
-  \item The arrow detection is still quite rough and likely has some bugs. One known issue is that you cannot provide parameters to the arrow tips (e.g. \texttt{Implies[red]}).
-  \item Similarly, redefining arrows does not have the desired effect (usually, it has no effect at all).
-  \item It would not be very hard to check for too much curvature in the offsetting algorithm and throw warnings in these cases.
-  \item Migrating away from the \texttt{decorations} library and integrating this algorithm more tightly with the rendering pipeline would be possible. I expect that doing so will significantly improve the performance and also fix most arrow-related issues. This idea is on the back burner for now, as it likely requires changes to the TikZ rendering pipeline. If the TikZ team shows interest in integrating this library, I will reconsider this.
-  \item Discontinuous paths with an arrow tip at the start are rendered differently in \tikzdouble{} and \nfold. As I do not really see a use case for such paths (and a rendering pipeline integration would likely fix it anyway), this issue is not a priority for now.
-\end{itemize}
-
-\subsection{Impossible or very hard to fix}
-\begin{itemize}
-  \item Correctly rendering paths with too much curvature is borderline impossible with this approach. This is one of the cases where using \tikzdouble{} is the only viable option.
+  Some, but not all of these cases raise warnings (this feature is on the wish list). This is one of the cases where using \tikzdouble{} is the only viable option.
+  \item Dashed paths with significant curvature will desynchronise:
+\begin{tkzexample}[latex=3cm]
+\begin{tikzpicture}
+  \draw[arrows=-Implies, double equal sign distance, dashed,
+        scaling nfold=4] (0,0) to[out=30, in=150] (2,0);
+\end{tikzpicture}
+\end{tkzexample}
   \item Curves of \nfold{} slightly deviate from the curves of \tikzdouble{} near joins with a non-zero angle:
 \begin{tkzexample}[latex=3.5cm]
 \begin{tikzpicture}[line width=1pt]
@@ -231,7 +239,7 @@ This package is far from perfect, and even if it were, there would still be some
 \end{tikzpicture}
 \end{tkzexample}
   This cannot be fixed without extensive use of the \texttt{intersections} library, hurting the performance, and the result might still not look great for orders $\geq 3$.
-  \item Very short curves with large angles at the ends result in a glitched output:
+  \item Very short \emph{curves} with large angles at the ends result in a glitched output:
 \begin{tkzexample}[latex=3.5cm]
 \begin{tikzpicture}
   \draw[black] (1, 0) -- (3,0) -- (2, 1.2) -- (4, .8);
@@ -239,8 +247,8 @@ This package is far from perfect, and even if it were, there would still be some
      to[relative, out=1, in=179] (2, 1.2) -- (4, .8);
 \end{tikzpicture}
 \end{tkzexample}
-  This issue has been fixed for straight lines in version \texttt{0.0.2}, but it is much harder to fix for curves.
-  \item changing joins in \verb|\pgfsys@beginscope| without an accompanying \TeX{} group may cause inconsistent behaviour in the joins. For example,
+  This issue has been fixed for \emph{straight lines} in version \texttt{0.0.2}, but it is much harder to fix for curves.
+  \item changing joins in \verb|\pgfsys@beginscope| without an accompanying \TeX{} group may cause inconsistent behaviour in the joins. For example:
 \begin{tkzexample}[latex=2cm]
 \makeatletter
 \begin{tikzpicture}[line join=miter, line width=2pt]
@@ -254,8 +262,10 @@ This package is far from perfect, and even if it were, there would still be some
   has \texttt{round} joins on the large path, but \texttt{miter} joins on the constituent paths. This problem does not occur with \verb|\pgfscope|.
 \end{itemize}
 
+
 \section{The basic layer \texttt{pgf} commands}
 
+\subsection{Offsetting curves}
 This package also provides some basic layer commands for offsetting curves and straight lines. Use
 \begin{verbatim}
 \usepgflibrary{bezieroffset}
@@ -268,20 +278,56 @@ to only import the base layer library. The following commands are provided:
   \item \verb|\pgfoffsetlinenomove|: This macro is analogous to \verb|\pgfoffsetcurvenomove|.
 \end{itemize}
 
+\subsection{Offsetting paths}
+The following macros offset an entire soft path. These are part of the TikZ library \nfold.
+\begin{itemize}
+  \item \verb|\pgfoffsetpath{softpath}{length}|: This macro offsets \texttt{softpath} by \texttt{length}. The latter may be negative.
+  \item \verb|\pgfoffsetpathfraction{softpath}{hwidth}{fraction}|: This macro offsets the \texttt{softpath} by \texttt{fraction*hwidth}. Note that the output is \emph{not} equal to the previous macro with \texttt{length=fraction*hwidth} because the joins are treated differently -- see the examples below. Further note that \texttt{length=0} does \emph{not} reproduce the input path, but instead outputs a path that is centred on the input path with length
+  \item \verb|\pgfoffsetpathqfraction|: This macro is a quicker version of the previous macro  does not parse the input values using the \texttt{pgfmath}-engine.
+  \item \verb|\pgfoffsetpathindex{softpath}{width}{i}{n}|: In this convenience method, \texttt{i} and \texttt{n} are integers with $1 \leq i \leq n$. This corresponds to \texttt{fraction=-1} for \texttt{i=1} and \texttt{fraction=1} for \texttt{i=n}, and is capable of reproducing the output of \nfold{} (albeit less efficient).
+\end{itemize}
+
+\begin{tkzexample}[latex=4cm]
+\begin{tikzpicture}[line join=bevel]
+  \path[save path=\savedpath] (0,0) -- (1,0)
+    to[out=0, in=-90] (1,3) -- (3,2);
+  \pgfoffsetpath{\savedpath}{0pt}
+  \color{black} \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{8pt}
+  \color{red} \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{-8pt}
+  \color{green} \pgfusepathqstroke
+\end{tikzpicture}
+\end{tkzexample}
+\begin{tkzexample}[latex=4cm]
+\begin{tikzpicture}
+  \path[save path=\mypath] (0,0) -- (2,0) arc(-90:90:1)
+    to[out=180, in=0] (0,1) -- (0,2);
+  \foreach \mycolor [count=\i] in {red,green,blue,violet}
+    \pgfoffsetpathindex{\mypath}{6pt}{\i}{4}
+    \color{\mycolor} \pgfusepathqstroke;
+\end{tikzpicture}
+\end{tkzexample}
+
+
+\newpage
 \section{Version history}
 
 \begin{itemize}
-  \item \textbf{0.0.1}: First public version
-  \item \textbf{0.0.2}: Bugfixes
+  \item \textbf{0.1.0}: Major overhaul
   \begin{itemize}
-    \item \texttt{dashed} no longer influences the arrow tip
-    \item Very short lines with large angles at both ends are now offset correctly
+    \item The \texttt{decorations} library was dropped
+    \item Various improvements in \texttt{bezieroffset} (thanks to \hbox{Qrrbrbirlbel})
+    \item Support for directly offsetting soft paths
+    \item Very short lines with large angles were fixed (e.g.\ in \texttt{tikzcd} with \texttt{squiggly})
+    \item Numerous bugs fixed
   \end{itemize}
+  \item \textbf{0.0.1}: First public version
 \end{itemize}
 
 \appendix
 \newpage
-\section{The offsetting algorithm}
+\section{The Bézier offsetting algorithm}
 
 This algorithm is based on an algorithm by \href{https://github.com/Pomax/}{Pomax}. See \href{https://pomax.github.io/bezierinfo/#offsetting}{A Primer on Bézier curves}, the source code can be found \href{https://github.com/Pomax/bezierinfo/blob/bcfce2149fa5e5540a2a2605986adab3b2a9a3bf/js/graphics-element/lib/bezierjs/bezier.js}{here}.
 
@@ -307,7 +353,7 @@ In order to offset an arbitrary Bézier curve we split it into fully simple segm
 
 \subsection{Subdivision}
 
-It is well known that at every point $0 < t < 1$, a Bézier curve $A = (A_1, A_2, A_3, A_4)$ can be subdivided into two Bézier curves $B$ and $C$ using de Casteljau's algorithm (which naturally fulfil $A_1 = B_1$ and $A_4 = C_4$). A more or less heuristic fact is that $B$ and $C$ are ``more likely'' to be simple than $A$ (if you can prove any of the statements here, please contact me). Hence, if one wants to offset a non-simple curve $A$, one could try to subdivide $A$ until all of its segments are simple, then offset each segment.
+It is well known that at every point $0 < t < 1$, de Casteljau's algorithm can subdivide a Bézier curve $A = (A_1, A_2, A_3, A_4)$ into two Bézier curves $B$ and $C$ (which naturally fulfil $A_1 = B_1$ and $A_4 = C_4$). A more or less heuristic fact is that $B$ and $C$ are ``more likely'' to be simple than $A$ (if you can prove any of the statements here, please contact me). Hence, if one wants to offset a non-simple curve $A$, one could try to subdivide $A$ until all of its segments are simple, then offset each segment.
 
 \subsection{Pomax' approach}
 The original approach by Pomax consists of two passes. The first pass subdivides $A$ on all extrema in $x$ or $y$. In a second pass, each segment $A^{(i)}$ is made simple in steps of $t \mapsto t + 0.01$, roughly using the following pseudocode:
@@ -322,15 +368,15 @@ The original approach by Pomax consists of two passes. The first pass subdivides
     t_2 += 0.01
 \end{verbatim}
 \end{samepage}
-Essentially, this verifies with great certainty that the segment is fully simple in the sense of 
+Essentially, this ensures with great certainty that the segment is fully simple in the sense of \cref{def:fullySimpleCurve}.
 
-The main reason this approach is not used in this library is performance, as the library is slow enough already. Other minor reasons include that the original approach is not invariant under reversals or rotations: Reversing and/or rotating a curve yields a different subdivision and hence potentially a slightly different-looking curve.
+The main reason this approach is not used in this library is performance, since the loop is computationally quite expensive. Other minor reasons include that the original approach is not invariant under reversals or rotations: Reversing and/or rotating a curve yields a different subdivision and hence potentially a slightly different-looking curve.
 
 \subsection{The approach used here}
 \label{subsec:subdivisionUsed}
-In this library, we instead take a recursive approach:
+In this library we instead take a recursive approach:
 \begin{verbatim}
-  def split(A, level):
+  def makeSimple(A, level):
     if isSimple(A):
       segments += [A]
     else:
@@ -339,8 +385,8 @@ In this library, we instead take a recursive approach:
         segments += [A]
       else:
         first, second = split(A, t=0.5)
-        split(first, level-1)
-        split(second, level-1)
+        makeSimple(first, level-1)
+        makeSimple(second, level-1)
 \end{verbatim}
 The default maximum depth is 5, so the curve is split into at most $2^5 = 32$ segments. This has the downside that some simple but not fully simple curves may remain undetected and be offset slightly incorrectly. If you encounter examples of such curves with bad outputs or if you have any ideas for additional constraints to add to \cref{def:simpleCurve} that can be checked with reasonable computational effort, please be in touch.
 
