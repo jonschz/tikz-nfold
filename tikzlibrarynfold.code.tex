@@ -16,7 +16,6 @@
 % This work consists of the files pgflibrarybezieroffset.code.tex,
 % tikzlibrarynfold.code.tex, tikz-nfold-doc.tex, and tikz-nfold-doc.pdf.
 
-%\usetikzlibrary{decorations}
 \usetikzlibrary{arrows.meta}
 \usepgflibrary{bezieroffset}
 
@@ -27,10 +26,7 @@
 % Near future
 % -----------
 % - various inline TODOs in this file
-% - globally rename \pgf@shiftdec@amount
-% - globally rename \pgf@decoration@nfold@hwidth
 % - can we remove some or all of \global, \gdef, \xdef now?
-% - new code: search for "deco" to see if we missed anything
 %
 %
 % Later
@@ -121,7 +117,7 @@
     {\pgf@nfold@inputsegment@first}%
     {\pgfpointpolar%
       {\pgf@nfold@previous@endangle+.5*\pgf@nfold@deltaphi+90}% do not change
-      {\pgf@shiftdec@amount/cos(.5*\pgf@nfold@deltaphi)}%
+      {\pgf@nfold@shiftamount/cos(.5*\pgf@nfold@deltaphi)}%
     }%
   \pgfpathlineto{}%
 }
@@ -147,7 +143,7 @@
   % This threshold decides if the inside line has a bevel or a miter join
   \pgfmathparse{\bevelshorten < abs(sin(.5*\pgf@nfold@deltaphi))}
   \ifnum\pgfmathresult=1\relax
-    \pgfmathsetlengthmacro{\bevelextension}{\bevelouterprotrusion-\bevelshorten*\pgf@decoration@nfold@hwidth}
+    \pgfmathsetlengthmacro{\bevelextension}{\bevelouterprotrusion-\bevelshorten*\pgf@nfold@hwidth}
     \pgfpointadd{\pgf@nfold@join@start}{\pgfpointpolar{\pgf@nfold@previous@endangle}{\bevelextension}}
     \pgfpathlineto{}
     \pgfpointadd{\pgf@nfold@join@end}{\pgfpointpolar{\pgf@nfold@cur@startangle}{-\bevelextension}}
@@ -172,7 +168,7 @@
     \pgfpatharc%
       {\pgf@nfold@previous@endangle+90*\turnindicator}%
       {\targetang+90*\turnindicator}%
-      {abs(\pgf@shiftdec@fraction)*\pgf@decoration@nfold@hwidth}%
+      {abs(\pgf@shiftdec@fraction)*\pgf@nfold@hwidth}%
   \else
     \pgf@nfold@miterjoin
   \fi
@@ -181,11 +177,11 @@
 \def\pgf@nfold@make@join{
   % Offset the start and end of this join
   \pgfextract@process\pgf@nfold@join@start{%
-    \pgfpointadd{\pgf@nfold@cached@endpoint}
-                {\pgfpointpolar{\pgf@nfold@previous@endangle+90}{\pgf@shiftdec@amount}}}%
+    \pgfpointadd{\pgf@nfold@previous@joinend}
+                {\pgfpointpolar{\pgf@nfold@previous@endangle+90}{\pgf@nfold@shiftamount}}}%
   \pgfextract@process\pgf@nfold@join@end{%
     \pgfpointadd{\pgf@nfold@segment@start}
-                {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@shiftdec@amount}}}%
+                {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@nfold@shiftamount}}}%
   \pgfpointdiff{\pgf@nfold@join@start}{\pgf@nfold@join@end}
   % Check if the start of this segment is too close to the end of the previous segment.
   % In that case we don't insert a join segment, as it would look rather glitchy.
@@ -233,7 +229,7 @@
     \ifpgf@nfold@closejoinsedgecase%
       \ifdim\insidepercentage pt<.5pt\relax%
         \pgfpointadd{\pgf@nfold@segment@end}%
-        {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@shiftdec@amount}}
+        {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@nfold@shiftamount}}
       \fi%
     \fi
     \pgfpathlineto{}
@@ -286,7 +282,7 @@
         \pgf@nfold@angletoosharptrue
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenstartjoin}%
-          {\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@nfold@deltaphi@start))}
+          {\pgf@nfold@hwidth*abs(tan(0.5*\pgf@nfold@deltaphi@start))}
         \pgfextract@process\pgf@nfold@segment@start{%
           \pgfpointadd{\pgf@nfold@inputsegment@first}%
                       {\pgfpointpolar{\pgf@nfold@cur@startangle}{\pgf@nfold@shortenstartjoin}}}%
@@ -301,7 +297,7 @@
         \pgfutil@packagewarning{tikz-nfold}{Angle too sharp, expect visual errors}
       \else
         \pgfmathsetlengthmacro{\pgf@nfold@shortenendjoin}%
-          {\pgf@decoration@nfold@hwidth*abs(tan(0.5*\pgf@nfold@deltaphi@end))}
+          {\pgf@nfold@hwidth*abs(tan(0.5*\pgf@nfold@deltaphi@end))}
         \pgfextract@process\pgf@nfold@segment@end{%
           \pgfpointadd{\pgf@nfold@inputsegment@last}%
                       {\pgfpointpolar{\pgf@nfold@cur@endangle}{-\pgf@nfold@shortenendjoin}}}%
@@ -335,7 +331,7 @@
         % are reversed in the edge case.
         \pgfpointadd%
           {\pgf@nfold@segment@start}%
-          {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@shiftdec@amount}}
+          {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@nfold@shiftamount}}
         \pgfpathmoveto{}
        \fi
     \else
@@ -351,7 +347,7 @@
   % in order to make space for the end join. This will be used
   % when wed draw the join at the start of the next segment
   \ifx\pgf@nfold@next@inputsegment\pgf@nfold@inputsegmentmoveto\else
-    \global\let\pgf@nfold@cached@endpoint\pgf@nfold@segment@end
+    \let\pgf@nfold@previous@joinend\pgf@nfold@segment@end
   \fi
   %
   % Step 3: Draw the new segment.
@@ -360,9 +356,9 @@
   \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlineto
     \ifpgf@nfold@closejoinsedgecase\else
       \ifpgf@nfold@continuesegment
-        \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+        \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@nfold@shiftamount}
       \else
-        \pgfoffsetline{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+        \pgfoffsetline{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@nfold@shiftamount}
       \fi
     \fi
   \fi
@@ -373,23 +369,17 @@
     % We could then insert a "fake previous segment" into the path at the right place
     \pgfutil@packagewarning{tikz-nfold}{The option 'cycle' is not yet properly supported}
     \pgfpathclose
-% Old code, likely no longer needed
-%      \ifpgf@nfold@continuesegment
-%        \pgfoffsetlinenomove{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
-%      \else
-%        \pgfoffsetline{\pgf@nfold@segment@start}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
-%      \fi
   \fi
   \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto
     \ifpgf@nfold@continuesegment
-      \pgfoffsetcurvenomove{\pgf@nfold@segment@start}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+      \pgfoffsetcurvenomove{\pgf@nfold@segment@start}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@nfold@shiftamount}
     \else
-      \pgfoffsetcurve{\pgf@nfold@segment@start}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@shiftdec@amount}
+      \pgfoffsetcurve{\pgf@nfold@segment@start}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@segment@end}{\pgf@nfold@shiftamount}
     \fi
   \fi
   \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentmoveto
-    % Every moveto is executed in the offsetting of the subsequent draw command
-    % and is thus not needed here
+    % Every moveto is executed in the offsetting of the subsequent draw command,
+    % therefore we do not need a \pgfpathmoveto call here
     \ifx\pgf@nfold@previousinputsegment\pgf@nfold@inputsegmentfirst
       % Draw the tip extension at the start (if present)
       \ifnum\pgf@nfold@start@arrowcode=1
@@ -474,13 +464,13 @@
       \pgftransformrotate{\pgf@nfold@cur@endangle}
     \fi
     % we don't want to undo the shift by .42\pgflinewidth after the scaling
-    \pgfutil@tempdima=\pgf@decoration@nfold@hwidth
+    \pgfutil@tempdima=\pgf@nfold@hwidth
     \pgfutil@tempdima=\pgf@shiftdec@fraction\pgfutil@tempdima
     \pgfextract@process\pgf@nfold@startofextension
       {\pgfpointtransformed{\pgfqpoint{0pt}{\pgfutil@tempdima}}}
     % 0.5 - 0.06 = 0.42
     \pgftransformshift{\pgfqpoint{.42\pgflinewidth}{0pt}}
-    \pgftransformscale{\pgf@decoration@nfold@hwidth}
+    \pgftransformscale{\pgf@nfold@hwidth}
     \pgfextract@process\pgf@nfold@arrowintersect{\pgfpointtransformed{\pgf@nfold@arrowintersect}}
     \global\let\pgf@nfold@startofextension\pgf@nfold@startofextension
     \global\let\pgf@nfold@arrowintersect\pgf@nfold@arrowintersect
@@ -687,32 +677,6 @@
   \fi%
   \pgf@next}%
 
-% Mostly for completeness sake; using TikZ' (0,0) rectangle (1,1) does not call this code
-\def\pgf@nfold@parserect#1#2\pgfsyssoftpath@rectsizetoken#3#4{%
-  \let\pgf@nfold@orig@@parsesoftpath\pgf@nfold@@parsesoftpath%
-  \let\pgf@nfold@@parsesoftpath\relax%
-  \pgf@nfold@parsemoveto{#1}{#2}%
-  \pgf@xb=#1\relax
-  \pgf@yb=#2\relax
-  \pgf@xc=#3\relax
-  \pgf@yc=#4\relax
-    \advance\pgf@yb\pgf@yc%
-    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
-    \expandafter\pgf@nfold@parselineto\pgf@temp%
-    \advance\pgf@xb\pgf@xc%
-    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
-    \expandafter\pgf@nfold@parselineto\pgf@temp%
-    \advance\pgf@yb-\pgf@yc%
-    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
-    \expandafter\pgf@nfold@parselineto\pgf@temp%
-    \advance\pgf@xb-\pgf@xc%
-    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
-    \expandafter\pgf@nfold@parselineto\pgf@temp%
-  \let\pgf@nfold@@parsesoftpath\pgf@nfold@orig@@parsesoftpath%
-  \edef\pgf@marshal{\noexpand\pgf@nfold@parsemoveto{\the\pgf@xb}{\the\pgf@yb}}%
-  \pgf@marshal%
-}
-
 \def\pgf@nfold@parsemoveto#1#2{%
   \def\pgf@nfold@queueinputsegmentobject{\pgf@nfold@inputsegmentobject@moveto{\pgf@x#1\pgf@y#2}}%
   \def\pgfpoint@nfold@lastparsed{\pgf@x#1\pgf@y#2}%
@@ -759,6 +723,32 @@
   \pgf@nfold@@parsesoftpath%
 }%
 
+% Mostly for the sake of completeness; using TikZ' "\path (0,0) rectangle (1,1);" does not call this code
+\def\pgf@nfold@parserect#1#2\pgfsyssoftpath@rectsizetoken#3#4{%
+  \let\pgf@nfold@orig@@parsesoftpath\pgf@nfold@@parsesoftpath%
+  \let\pgf@nfold@@parsesoftpath\relax%
+  \pgf@nfold@parsemoveto{#1}{#2}%
+  \pgf@xb=#1\relax
+  \pgf@yb=#2\relax
+  \pgf@xc=#3\relax
+  \pgf@yc=#4\relax
+    \advance\pgf@yb\pgf@yc%
+    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
+    \expandafter\pgf@nfold@parselineto\pgf@temp%
+    \advance\pgf@xb\pgf@xc%
+    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
+    \expandafter\pgf@nfold@parselineto\pgf@temp%
+    \advance\pgf@yb-\pgf@yc%
+    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
+    \expandafter\pgf@nfold@parselineto\pgf@temp%
+    \advance\pgf@xb-\pgf@xc%
+    \edef\pgf@temp{{\the\pgf@xb}{\the\pgf@yb}}%
+    \expandafter\pgf@nfold@parselineto\pgf@temp%
+  \let\pgf@nfold@@parsesoftpath\pgf@nfold@orig@@parsesoftpath%
+  \edef\pgf@marshal{\noexpand\pgf@nfold@parsemoveto{\the\pgf@xb}{\the\pgf@yb}}%
+  \pgf@marshal%
+}
+
 \def\pgf@nfold@addtoinputsegmentobjects#1{%
   %
   % If there is an input segment object waiting (i.e. a moveto), insert it here.
@@ -776,8 +766,6 @@
   \expandafter\def\expandafter\pgf@nfold@inputsegmentobjects\expandafter%
     {\pgf@nfold@inputsegmentobjects{#1}}%
 }%
-
-
 
 
 %% Components of the path, modified
@@ -824,7 +812,7 @@
 
 
 \def\pgf@nfold@traversepath{%
-  % Transformations are already baked into the path; without this call, they will be applied twice
+  % Transformations are already baked into the path; without this call, they would be applied twice
   \pgftransformreset
   % could likely also use \let\pgf@nfold@currentinputsegmentobjects\parsedsoftpath here
   \let\pgf@nfold@currentinputsegmentobjects\pgf@nfold@inputsegmentobjects%
@@ -942,7 +930,7 @@
 \def\pgf@nfold@loop@inner{%
   \pgfmathsetmacro{\pgf@shiftdec@fraction}%
     {-1+2*(\pgf@nfold@index-1)/(\pgf@nfold@order-1)}
-  \pgfmathsetlengthmacro{\pgf@shiftdec@amount}{\pgf@decoration@nfold@hwidth*\pgf@shiftdec@fraction}
+  \pgfmathsetlengthmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@shiftdec@fraction}
   \pgf@nfold@traversepath%
   \pgfsyssoftpath@flushcurrentpath%
   \pgf@up@action%
@@ -968,7 +956,7 @@
     % Compute the full and constituent part line widths
     \pgf@nfold@compute@widths@from@double%
     \pgfsetlinewidth\pgf@x%
-    \edef\pgf@decoration@nfold@hwidth{\the\pgf@y}
+    \edef\pgf@nfold@hwidth{\the\pgf@y}
     \pgf@nfold@run@loop
   \endpgfscope
 }
@@ -982,17 +970,17 @@
 % Outputs a provided soft path in #1 offset by a distance provided in #2.
 \def\pgfoffsetpath#1#2{%
   \begingroup
-    \pgfmathsetlengthmacro\pgf@decoration@nfold@hwidth{#2}
-    % \pgf@decoration@nfold@hwidth must always be positive
-    \pgf@x=\pgf@decoration@nfold@hwidth\relax
+    \pgfmathsetlengthmacro\pgf@nfold@hwidth{#2}
+    % \pgf@nfold@hwidth must always be positive
+    \pgf@x=\pgf@nfold@hwidth\relax
     \ifdim\pgf@x<0pt\relax
       \pgf@x=-\pgf@x
       \def\pgf@shiftdec@fraction{-1}
     \else
       \def\pgf@shiftdec@fraction{1}
     \fi
-    \edef\pgf@decoration@nfold@hwidth{\the\pgf@x}
-    \pgfoffsetpathqfraction{#1}{\pgf@decoration@nfold@hwidth}{\pgf@shiftdec@fraction}
+    \edef\pgf@nfold@hwidth{\the\pgf@x}
+    \pgfoffsetpathqfraction{#1}{\pgf@nfold@hwidth}{\pgf@shiftdec@fraction}
   \endgroup
 }
 
@@ -1003,9 +991,9 @@
 %
 \def\pgfoffsetpathfraction#1#2#3{%
   \begingroup
-    \pgfmathsetlengthmacro\pgf@decoration@nfold@hwidth{#2}
+    \pgfmathsetlengthmacro\pgf@nfold@hwidth{#2}
     \pgfmathsetmacro\pgf@shiftdec@fraction{#3}
-    \pgfoffsetpathqfraction{#1}{\pgf@decoration@nfold@hwidth}{\pgf@shiftdec@fraction}
+    \pgfoffsetpathqfraction{#1}{\pgf@nfold@hwidth}{\pgf@shiftdec@fraction}
   \endgroup
 }
 
@@ -1023,10 +1011,10 @@
     \pgfprocessround{#1}{\cachedpath}% remove tokens from the soft path
     \pgf@nfold@parsesoftpath{\cachedpath}{\parsedsoftpath}
     \pgf@x=#2\relax
-    \edef\pgf@decoration@nfold@hwidth{\the\pgf@x}
+    \edef\pgf@nfold@hwidth{\the\pgf@x}
     \edef\pgf@shiftdec@fraction{#3}
     \pgf@x=\pgf@shiftdec@fraction\pgf@x\relax
-    \edef\pgf@shiftdec@amount{\the\pgf@x}
+    \edef\pgf@nfold@shiftamount{\the\pgf@x}
     \pgf@nfold@traversepath%
   \endgroup
 }
