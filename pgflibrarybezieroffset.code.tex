@@ -131,6 +131,7 @@
   \fi
 }
 % Computes the normalised tangents of a given Bezier curve and stores them in \pgf@tmp@tang@i and \pgf@tmp@tang@ii.
+% Also computes the angles and stores them in  \pgf@tmp@angle@i and \pgf@tmp@angle@ii.
 % All degenerate cases are covered. For a triple degenerate curve (all points equal), the vector (1,0) is returned.
 \def\pgf@offset@compute@tangents#1#2#3#4{%
   \pgf@process{\pgfpointdiff{#1}{#2}}% unintuitively, this is PTii - PTi
@@ -144,7 +145,12 @@
       \pgf@process{\pgfpointdiff{#1}{#4}}%
     \fi
   \fi
-  \pgfextract@process\pgf@tmp@tang@i{\pgfpointnormalised{}}%
+  \pgfextract@process\pgf@tmp@tang@i{%
+    \pgfpointnormalised{}%
+    % \pgfpointnormalised stores the angle of the vector in \pgf@tmp
+    \global\let\pgf@nfold@tmp\pgf@tmp%
+  }%
+  \let\pgf@tmp@angle@i\pgf@nfold@tmp%
   \pgf@process{\pgfpointdiff{#3}{#4}}%
   \pgfoffset@abssum\pgf@xa
   \ifdim\pgf@xa<0.1pt\relax
@@ -154,7 +160,8 @@
       \pgf@process{\pgfpointdiff{#1}{#4}}%
     \fi
   \fi
-  \pgfextract@process\pgf@tmp@tang@ii{\pgfpointnormalised{}}%
+  \pgfextract@process\pgf@tmp@tang@ii{\pgfpointnormalised{}\global\let\pgf@nfold@tmp\pgf@tmp}%
+  \let\pgf@tmp@angle@ii\pgf@nfold@tmp%
 }
 
 

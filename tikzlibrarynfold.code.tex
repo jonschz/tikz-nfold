@@ -839,12 +839,10 @@
 
 
 \def\pgf@nfold@computeangles{
-  % TODO add the improved code for partially singular curves here
   \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto%
-    \pgfmathanglebetweenpoints{\pgf@nfold@inputsegment@first}{\pgf@nfold@inputsegment@supporta}%
-    \edef\pgf@nfold@cur@startangle{\pgfmathresult}
-    \pgfmathanglebetweenpoints{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@inputsegment@last}%
-    \edef\pgf@nfold@cur@endangle{\pgfmathresult}
+    \pgf@offset@compute@tangents{\pgf@nfold@inputsegment@first}{\pgf@nfold@inputsegment@supporta}{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@inputsegment@last}
+    \let\pgf@nfold@cur@startangle\pgf@tmp@angle@i
+    \let\pgf@nfold@cur@endangle\pgf@tmp@angle@ii
   \else%
     \pgfmathanglebetweenpoints{\pgf@nfold@inputsegment@first}{\pgf@nfold@inputsegment@last}%
     \edef\pgf@nfold@cur@startangle{\pgfmathresult}
@@ -896,13 +894,13 @@
   \let\pgf@nfold@next@segmenttype\pgf@nfold@currentinputsegment%
   \let\pgf@nfold@next@startangle\pgf@nfold@cur@startangle%
   \pgf@nfold@currentinputsegmentobject% get the current segment into \pgf@nfold@inputsegment@first etc.
-  % TODO possible optimisation: Reuse some values computed for the next segment
   \pgf@nfold@computeangles%
   % Compute the angle differences at the start and end (between -180 and +180 degrees)
-  \pgfmathparse{\pgf@nfold@cur@startangle-\pgf@nfold@previous@endangle}
+  % using \pgfmathsubtract@ is more readable and no less efficient than computing this manually
+	\pgfmathsubtract@{\pgf@nfold@cur@startangle}{\pgf@nfold@previous@endangle}
   \pgf@nfold@clampangle
   \edef\pgf@nfold@deltaphi@start{\pgfmathresult}
-  \pgfmathparse{\pgf@nfold@next@startangle-\pgf@nfold@cur@endangle}
+  \pgfmathsubtract@{\pgf@nfold@next@startangle}{\pgf@nfold@cur@endangle}
   \pgf@nfold@clampangle
   \edef\pgf@nfold@deltaphi@end{\pgfmathresult}
 }
