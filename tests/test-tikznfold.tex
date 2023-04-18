@@ -10,156 +10,9 @@
 
 \begin{document}
 
-\section{Various tests}
-
-\subsection{Miter limit}
-
-\begin{tikzpicture}[line join=miter, miter limit=16, x={(1.1cm,0)}, y={(0,1.1cm)}]
-  \path[draw=green,opacity=0.5, line width=5pt] (0,0) -- (2,0) -- (0,0.25);
-  \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5] (0,0) -- (2,0) -- (0,0.25);
-\end{tikzpicture}
-\begin{tikzpicture}[line join=miter, miter limit=17, x={(1.1cm,0)}, y={(0,1.1cm)}]
-  \path[draw=green,opacity=0.5, line width=5pt] (0,0) -- (2,0) -- (0,0.25);
-  \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5] (0,0) -- (2,0) -- (0,0.25);
-\end{tikzpicture}
-
-\subsection{Angle too sharp}
-{
-  \makeatletter
-  \def\clearerrormsg{\let\errormsg\pgfutil@empty}
-  \renewcommand{\pgfutil@packagewarning}[2]{
-    \ifx\errormsg\pgfutil@empty
-      \xdef\errormsg{#2}
-    \else
-      \xdef\errormsg{\errormsg; #2}
-    \fi
-  }
-  \makeatother
-  \subsubsection{Almost 180 degree turn}
-  \clearerrormsg
-  \begin{tikzpicture}
-    \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0.01);
-  \end{tikzpicture}\\
-  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
-  Actual warning: \errormsg
-  \subsubsection{Exactly 180 degree turn}
-  \clearerrormsg
-  \begin{tikzpicture}
-    \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0);
-  \end{tikzpicture}\\
-  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
-  Actual warning: \errormsg
-}
-
-\subsection{Transformed axes with relative and absolute coordinates}
-
-\begin{tikzpicture}[x={(.3cm,.7cm)}, y={(.7cm,-.3cm)}]
-  \path[draw=green,opacity=0.5, line width=5pt, arrows=->] (1.5,1.0) -- (2.5,1.0) -- (2.5,0.5)  to[relative, out=30, in=150] (3.5,0.2);
-  \path[draw=purple, opacity=0.5, arrows=-Implies, double distance=4.2pt, nfold=5]
-      (1.5,1.0) -- (2.5,1.0) -- (2.5,0.5) to[relative, out=30, in=150] (3.5,0.2);
-  \path[draw=green,opacity=0.5, line width=5pt, arrows=->] (1.5cm,1.0cm) -- (2.5cm,1.0cm) -- (2.9cm,0.5cm);
-  \path[draw=purple, opacity=0.5, arrows=-Implies, double distance=4.2pt, nfold=5] (1.5cm,1.0cm) -- (2.5cm,1.0cm) -- (2.9cm,0.5cm);
-\end{tikzpicture}
-
-\subsection{Path with jump and cycle}
-\begin{tikzpicture}
-    \path [draw=green,opacity=0.5, line width=5pt] (0,0) -- (3,0.5) (3,1) arc (0:180:1.5 and 1) -- (2.5,0.9) -- cycle;
-  \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5] (0,0) -- (3,0.5) (3,1) arc (0:180:1.5 and 1) -- (2.5,0.9) -- cycle;
-\end{tikzpicture}
-
-\subsection{Different joins in the same diagram}
-
-\begin{tikzpicture}[line join=bevel, double distance=5pt, line width=.5pt, draw=purple, opacity=0.5]
-  \path[line join=miter, draw=green, line width=6pt] (0,0) -- (1, 0) -- (0,1);
-  \path[draw=green, line width=6pt] (2,0) -- (3, 0) -- (2,1);
-  \path[line join=round, draw=green, line width=6pt] (4,0) -- (5, 0) -- (4, 1);
-  \path[draw, line join=miter, double distance=5pt, nfold=4] (0,0) -- (1, 0) -- (0,1);
-  \path[draw, double distance=5pt, nfold=4] (2,0) -- (3, 0) -- (2,1);
-  \path[draw, line join=round, double distance=5pt, nfold=4] (4,0) -- (5, 0) -- (4, 1);
-\end{tikzpicture}
-
-\subsection{Shorten}
-Shortening needs to be implemented manually, as discussed in the comments.
-
-\begin{tikzpicture}
-  \draw[draw=green,opacity=.5,double distance=3pt, shorten >= 3pt, shorten <=-2pt, arrows=|-Implies] (0,0) to[bend left] (1,0);
-  \draw[draw=purple, opacity=.5,double distance=3pt, shorten >= 3pt, shorten <=-2pt, arrows=|-Implies, nfold=4] (0,0) to[bend left] (1,0);
-  \draw[draw=green,opacity=.5,double distance=3pt, shorten >= 5pt, shorten <=-2pt] (2,0) to[out=30,in=90] (3,0);
-  \draw[draw=purple, opacity=.5, double distance=3pt, shorten >= 5pt, shorten <=-2pt, nfold=3] (2,0) to[out=30,in=90] (3,0);
-\end{tikzpicture}
-
-\subsection{Different types of tips}
-
-\begin{tikzpicture}
-  \draw[draw=green,opacity=.5,double distance=3pt, arrows=|-|] (0,0) to[bend left] (1,0);
-  \draw[draw=purple, opacity=.5,double distance=3pt, arrows=|-|, nfold=4] (0,0) to[bend left] (1,0);
-  \draw[draw=green,opacity=.5,double distance=3pt, arrows=Implies-Implies] (2,0) to[out=90,in=90] (3,0);
-  \draw[draw=purple, opacity=.5, double distance=3pt, nfold=4, arrows=Implies-Implies] (2,0) to[out=90,in=90] (3,0);
-\end{tikzpicture}
-
-\subsection{More extreme paths}
-
-\begin{tikzpicture}
-  \draw[draw=green,opacity=.5,double distance=3pt] (0,0) .. controls (5,.9) and (5,-.8) .. (0,0);
-  \draw[draw=purple, opacity=.5,double distance=3pt, nfold=3] (0,0) .. controls (5,.9) and (5,-.8) .. (0,0);
-\end{tikzpicture}
-\begin{tikzpicture}
-  \draw[draw=green,opacity=.5,double distance=3pt] (0,-.5) .. controls (5, 1.3) and (5,-1.3) .. (0,.5);
-  \draw[draw=purple, opacity=.5,double distance=3pt, nfold=3] (0,-.5) .. controls (5, 1.3) and (5,-1.3) .. (0,.5);
-\end{tikzpicture}
-
-\subsection{Degenerate paths and tips}
-Does not crash, which is good. However, need to consider if this is the desired behaviour.
-
-\begin{tikzpicture}
-  \draw[draw=green,opacity=.5,double distance=3pt, arrows=|-|] (0,0) (.25,0) -- (.75,0) (1,0);
-  \draw[draw=purple, opacity=.5,double distance=3pt, arrows=|-|, nfold=4] (0,0) (.25,0) -- (.75,0) (1,0);
-  \draw[draw=green,opacity=.5,double distance=3pt, arrows=Implies-Implies] (2,0) (2.25,0) -- (2.75,0) (3,0);
-  \draw[draw=purple, opacity=.5, double distance=3pt, nfold=4, arrows=Implies-Implies] (2,0) (2.25,0) -- (2.75,0) (3,0);
-\end{tikzpicture}
-
-
-\subsection{Dashed}
-
-\begin{tikzpicture}
-  \draw[arrows=-Implies, double equal sign distance, dashed, nfold] (0,0) -- (1,0);
-  \draw[arrows=-Implies, double equal sign distance, dashed, nfold] (2,0) to[out=30, in=150] (4,0);
-\end{tikzpicture}\\
-The desynchronisation in the latter case is a fundamental limitation of this approach.
-
-
-\subsection{Short straight lines and large angles}
-
-\begin{tikzpicture}
-  \draw[green, double distance=4pt, decorate, decoration=zigzag, opacity=.5] (0,0) -- (1,0);
-  \draw[purple, double distance=4pt, decorate, decoration=zigzag, nfold, opacity=.5] (0,0) -- (1,0);
-  \draw[black,decorate, decoration=zigzag] (2,0) -- (3,0);
-  \draw[purple, double distance=7pt, decorate, decoration=zigzag, nfold, line join=round] (2,0) -- (3,0);
-  \draw[green, double distance=8pt, decorate, decoration=zigzag, opacity=.5] (4,0) -- (5,0);
-  \draw[purple, double distance=8pt, decorate, decoration=zigzag, nfold, opacity=.5] (4,0) -- (5,0);
-\end{tikzpicture}
-\vspace{1cm}
-
-\begin{tikzpicture}[line join=round]
-  \draw[black] (0, 0) -- (3,0) -- (2, 1.2) -- (6, .4);
-  \draw[blue, double distance=1cm, nfold=4] (0, 0) -- (3,0) -- (2, 1.2) -- (6, .4);
-  \draw[red, double distance=.32cm, nfold=2, opacity=.5] (0, 0) -- (3,0) -- (2, 1.2) -- (6, .4);
-  \draw[black] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
-  \draw[blue, double distance=1cm, nfold=4] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
-  \draw[red, double distance=.32cm, nfold=2, opacity=.5] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
-\end{tikzpicture}
-
-\subsection{Key \texttt{/tikz/scaling nfold}}
-
-\begin{tikzpicture}
-  % wrong way round disables scaling
-  \draw[double equal sign distance, nfold, arrows=-Implies, green, opacity=.5] (0,0) -- (1,0);
-  \draw[double equal sign distance, scaling nfold=4, arrows=-Implies, purple, opacity=.5] (0,0) -- (1,0);
-\end{tikzpicture}
+\section{pgf integration}
 
 \subsection{nfold path and nodes with \texttt{draw}}
-
-% TODO add to known issues: nfold must be set after double distance
 
 This used to be an issue and is the reason why \texttt{/tikz/nfold} redefines \verb"\tikz@double@setup" instead of modifying \verb"\pgf@nfold@order" directly:\\
 \begin{tikzpicture}
@@ -215,8 +68,170 @@ Note that this is \emph{not} called by TikZ' \texttt{rectangle} option.
   \pgfusepath{stroke,nfold}
 \end{pgfpicture}
 
+\subsection{An example where \textbackslash pgf@prepare@start@of@path is not called}
+In this example, the nfold preparation code must be injected into \verb|\pgf@path@check@proper|.
+{
+\makeatletter
+\def\pgf@prepare@start@of@path{\pgferror{not called}}
+\makeatother
+\begin{pgfpicture}
+  \pgfpathmoveto{\pgfpointorigin}
+  \pgfpathlineto{\pgfpoint{1cm}{0cm}}
+  % make the path non-proper by adding a dead moveto
+  \pgfpathmoveto{\pgfpointorigin}
+  \pgfsetlinewidth{.3cm}
+  \pgfsetinnerlinewidth{.25cm}
+  \pgfsetarrows{<->}
+  \pgfusepath{stroke,tips/proper,nfold=3} % likely means "only draw tips on proper arrows"
+\end{pgfpicture}
+}
 
-\subsection{Checking for undesired global effects}
+
+\section{Paths and features}
+
+\subsection{Miter limit}
+
+\begin{tikzpicture}[line join=miter, miter limit=16, x={(1.1cm,0)}, y={(0,1.1cm)}]
+  \path[draw=green,opacity=0.5, line width=5pt] (0,0) -- (2,0) -- (0,0.25);
+  \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5] (0,0) -- (2,0) -- (0,0.25);
+\end{tikzpicture}
+\begin{tikzpicture}[line join=miter, miter limit=17, x={(1.1cm,0)}, y={(0,1.1cm)}]
+  \path[draw=green,opacity=0.5, line width=5pt] (0,0) -- (2,0) -- (0,0.25);
+  \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5] (0,0) -- (2,0) -- (0,0.25);
+\end{tikzpicture}
+
+\subsection{Angle too sharp}
+{
+  \makeatletter
+  \def\clearerrormsg{\let\errormsg\pgfutil@empty}
+  \renewcommand{\pgfutil@packagewarning}[2]{
+    \ifx\errormsg\pgfutil@empty
+      \xdef\errormsg{#2}
+    \else
+      \xdef\errormsg{\errormsg; #2}
+    \fi
+  }
+  \makeatother
+
+  \subsubsection{Almost 180 degree turn}
+  \clearerrormsg
+  \begin{tikzpicture}
+    \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0.01);
+  \end{tikzpicture}\\
+  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
+  Actual warning: \errormsg
+
+  \subsubsection{Exactly 180 degree turn}
+  \clearerrormsg
+  \begin{tikzpicture}
+    \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0);
+  \end{tikzpicture}\\
+  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
+  Actual warning: \errormsg
+}
+
+\subsection{Transformed axes with relative and absolute coordinates}
+
+\begin{tikzpicture}[x={(.3cm,.7cm)}, y={(.7cm,-.3cm)}]
+  \path[draw=green,opacity=0.5, line width=5pt, arrows=->] (1.5,1.0) -- (2.5,1.0) -- (2.5,0.5)  to[relative, out=30, in=150] (3.5,0.2);
+  \path[draw=purple, opacity=0.5, arrows=-Implies, double distance=4.2pt, nfold=5]
+      (1.5,1.0) -- (2.5,1.0) -- (2.5,0.5) to[relative, out=30, in=150] (3.5,0.2);
+  \path[draw=green,opacity=0.5, line width=5pt, arrows=->] (1.5cm,1.0cm) -- (2.5cm,1.0cm) -- (2.9cm,0.5cm);
+  \path[draw=purple, opacity=0.5, arrows=-Implies, double distance=4.2pt, nfold=5] (1.5cm,1.0cm) -- (2.5cm,1.0cm) -- (2.9cm,0.5cm);
+\end{tikzpicture}
+
+\subsection{Path with jump and cycle}
+\begin{tikzpicture}
+    \path [draw=green,opacity=0.5, line width=5pt] (0,0) -- (3,0.5) (3,1) arc (0:180:1.5 and 1) -- (2.5,0.9) -- cycle;
+  \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5] (0,0) -- (3,0.5) (3,1) arc (0:180:1.5 and 1) -- (2.5,0.9) -- cycle;
+\end{tikzpicture}
+
+\subsection{Different joins in the same diagram}
+
+\begin{tikzpicture}[line join=bevel, double distance=5pt, line width=.5pt, draw=purple, opacity=0.5]
+  \path[line join=miter, draw=green, line width=6pt] (0,0) -- (1, 0) -- (0,1);
+  \path[draw=green, line width=6pt] (2,0) -- (3, 0) -- (2,1);
+  \path[line join=round, draw=green, line width=6pt] (4,0) -- (5, 0) -- (4, 1);
+  \path[draw, line join=miter, double distance=5pt, nfold=4] (0,0) -- (1, 0) -- (0,1);
+  \path[draw, double distance=5pt, nfold=4] (2,0) -- (3, 0) -- (2,1);
+  \path[draw, line join=round, double distance=5pt, nfold=4] (4,0) -- (5, 0) -- (4, 1);
+\end{tikzpicture}
+
+\subsection{Shorten}
+\begin{tikzpicture}
+  \draw[draw=green,opacity=.5,double distance=3pt, shorten >= 3pt, shorten <=-2pt, arrows=|-Implies] (0,0) to[bend left] (1,0);
+  \draw[draw=purple, opacity=.5,double distance=3pt, shorten >= 3pt, shorten <=-2pt, arrows=|-Implies, nfold=4] (0,0) to[bend left] (1,0);
+  \draw[draw=green,opacity=.5,double distance=3pt, shorten >= 5pt, shorten <=-2pt] (2,0) to[out=30,in=90] (3,0);
+  \draw[draw=purple, opacity=.5, double distance=3pt, shorten >= 5pt, shorten <=-2pt, nfold=3] (2,0) to[out=30,in=90] (3,0);
+\end{tikzpicture}
+
+\subsection{Different types of tips}
+\begin{tikzpicture}
+  \draw[draw=green,opacity=.5,double distance=3pt, arrows=|-|] (0,0) to[bend left] (1,0);
+  \draw[draw=purple, opacity=.5,double distance=3pt, arrows=|-|, nfold=4] (0,0) to[bend left] (1,0);
+  \draw[draw=green,opacity=.5,double distance=3pt, arrows=Implies-Implies] (2,0) to[out=90,in=90] (3,0);
+  \draw[draw=purple, opacity=.5, double distance=3pt, nfold=4, arrows=Implies-Implies] (2,0) to[out=90,in=90] (3,0);
+\end{tikzpicture}
+
+\subsection{More extreme paths}
+\begin{tikzpicture}
+  \draw[draw=green,opacity=.5,double distance=3pt] (0,0) .. controls (5,.9) and (5,-.8) .. (0,0);
+  \draw[draw=purple, opacity=.5,double distance=3pt, nfold=3] (0,0) .. controls (5,.9) and (5,-.8) .. (0,0);
+\end{tikzpicture}
+\begin{tikzpicture}
+  \draw[draw=green,opacity=.5,double distance=3pt] (0,-.5) .. controls (5, 1.3) and (5,-1.3) .. (0,.5);
+  \draw[draw=purple, opacity=.5,double distance=3pt, nfold=3] (0,-.5) .. controls (5, 1.3) and (5,-1.3) .. (0,.5);
+\end{tikzpicture}
+
+\subsection{Degenerate paths and tips}
+The second example has some slightly incorrect behaviour, but I don't expect many cases where this would be relevant.
+\begin{tikzpicture}
+  \draw[draw=green,opacity=.5,double distance=3pt, arrows=|-|] (0,0) (.25,0) -- (.75,0) (1,0);
+  \draw[draw=purple, opacity=.5,double distance=3pt, arrows=|-|, nfold=4] (0,0) (.25,0) -- (.75,0) (1,0);
+  \draw[draw=green,opacity=.5,double distance=3pt, arrows=Implies-Implies] (2,0) (2.25,0) -- (2.75,0) (3,0);
+  \draw[draw=purple, opacity=.5, double distance=3pt, nfold=4, arrows=Implies-Implies] (2,0) (2.25,0) -- (2.75,0) (3,0);
+\end{tikzpicture}
+
+
+\subsection{Dashed}
+
+\begin{tikzpicture}
+  \draw[arrows=-Implies, double equal sign distance, dashed, nfold] (0,0) -- (1,0);
+  \draw[arrows=-Implies, double equal sign distance, dashed, nfold] (2,0) to[out=30, in=150] (4,0);
+\end{tikzpicture}\\
+The desynchronisation in the latter case is a fundamental limitation of this approach.
+
+
+\subsection{Short straight lines and large angles}
+
+\begin{tikzpicture}
+  \draw[green, double distance=4pt, decorate, decoration=zigzag, opacity=.5] (0,0) -- (1,0);
+  \draw[purple, double distance=4pt, decorate, decoration=zigzag, nfold, opacity=.5] (0,0) -- (1,0);
+  \draw[black,decorate, decoration=zigzag] (2,0) -- (3,0);
+  \draw[purple, double distance=7pt, decorate, decoration=zigzag, nfold, line join=round] (2,0) -- (3,0);
+  \draw[green, double distance=8pt, decorate, decoration=zigzag, opacity=.5] (4,0) -- (5,0);
+  \draw[purple, double distance=8pt, decorate, decoration=zigzag, nfold, opacity=.5] (4,0) -- (5,0);
+\end{tikzpicture}
+\vspace{1cm}
+
+\begin{tikzpicture}[line join=round]
+  \draw[black] (0, 0) -- (3,0) -- (2, 1.2) -- (6, .4);
+  \draw[blue, double distance=1cm, nfold=4] (0, 0) -- (3,0) -- (2, 1.2) -- (6, .4);
+  \draw[red, double distance=.32cm, nfold=2, opacity=.5] (0, 0) -- (3,0) -- (2, 1.2) -- (6, .4);
+  \draw[black] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
+  \draw[blue, double distance=1cm, nfold=4] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
+  \draw[red, double distance=.32cm, nfold=2, opacity=.5] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
+\end{tikzpicture}
+
+\subsection{Key \texttt{/tikz/scaling nfold}}
+
+\begin{tikzpicture}
+  % wrong way round disables scaling
+  \draw[double equal sign distance, nfold, arrows=-Implies, green, opacity=.5] (0,0) -- (1,0);
+  \draw[double equal sign distance, scaling nfold=4, arrows=-Implies, purple, opacity=.5] (0,0) -- (1,0);
+\end{tikzpicture}
+
+\section{Checking for undesired global effects}
 
 \begin{tikzpicture}[line join=miter, miter limit=10, x={(1.1cm,0)}, y={(0,1.1cm)}]
   \path [draw=green,opacity=0.5, line width=5pt, arrows=->] (3,1) arc (0:180:1.5 and 1) -- (0.5,1.0) -- (2.5,1.0) -- (2.9,0.5)  to[relative, out=30, in=150] (3.5,0.2) (0,0) -- (2,0) -- (0,0.25) ;
