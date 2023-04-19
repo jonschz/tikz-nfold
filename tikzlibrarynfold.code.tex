@@ -31,6 +31,8 @@
 %
 % Later
 % -----
+% - Reuse results of tangent and angle computations
+%   - at the moment, the start/end tangents and angles of segments are computed 3 (?) times
 % - add "\else" in various places (likely better performance)
 % - consider turning this into a pgf library, as it does not need TikZ
 %   - only define /tikz/nfold in the skeleton tikz library
@@ -274,33 +276,90 @@
   \ifpgf@nfold@segm@visible%
     % Step 1.1: Make space for the join at the start if needed
     \ifx\pgf@nfold@previousinputsegment\pgf@nfold@inputsegmentmoveto\else
+      \pgf@xb=\pgf@nfold@deltaphi@start pt\relax
+      \ifdim\pgf@xb<0pt\relax
+        \pgf@xb=-\pgf@xb
+      \fi
       % TODO Future idea: Also check if we move backwards further than the length of the line plus one (or two) hwidth's
-      \pgfmathparse{abs(\pgf@nfold@deltaphi@start) > 178}
-      \ifnum\pgfmathresult=1\relax
+      \ifdim\pgf@xb>178pt\relax
         % we go full backwards, don't relocate the start and disable the join to avoid division by zero
         \pgfutil@packagewarning{tikz-nfold}{Angle too sharp, expect visual errors}
         \pgf@nfold@angletoosharptrue
       \else
-        \pgfmathsetlengthmacro{\pgf@nfold@shortenstartjoin}%
-          {\pgf@nfold@hwidth*abs(tan(0.5*\pgf@nfold@deltaphi@start))}
-        \pgfextract@process\pgf@nfold@segment@start{%
-          \pgfpointadd{\pgf@nfold@inputsegment@first}%
-                      {\pgfpointpolar{\pgf@nfold@cur@startangle}{\pgf@nfold@shortenstartjoin}}}%
+        \ifdim\pgf@xb>0.5pt\relax
+           % make space for the start join if the angle is nonzero
+          \pgf@yb=.5\pgf@xb
+          \pgfmathtan@{\pgf@yb}
+          \pgf@yb=\pgf@nfold@hwidth
+          \pgf@yb=\pgfmathresult\pgf@yb
+          \edef\pgf@nfold@shortenstartjoin{\the\pgf@yb}
+          \pgfextract@process\pgf@nfold@segment@start{%
+            \pgfpointadd{\pgf@nfold@inputsegment@first}%
+                        {\pgfqpointpolar{\pgf@nfold@cur@startangle}{\pgf@yb}}}%
+          \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto
+            % For a curve we need to relocate the @supporta point as well, as otherwise the @first point
+            % might overtake it
+            \pgfpointdiff{\pgf@nfold@inputsegment@first}{\pgf@nfold@inputsegment@supporta}
+%            \pgfoffset@abssum\pgf@xa
+%            \pgfmathparse{veclen(\pgf@x,\pgf@y)}
+            \pgfmathveclen@{\pgf@x}{\pgf@y}
+            \ifdim\pgfmathresult pt>0.1pt\relax
+              \pgfwarning{offsetting start}
+              % regular curves: shift supporta by sqrt(a^2 + b^2) where a is the unshifted distance and b is the shift of the first point. This way, supporta is always shifted by a strictly larger distance than first, preserving the tangent in the first control point, but the difference is always small.
+              \pgfmathveclen@{\pgfmathresult}{\pgf@nfold@shortenstartjoin}
+              \pgfextract@process\pgf@nfold@inputsegment@supporta{\pgfpointadd%
+                {\pgf@nfold@inputsegment@first}%
+                {\pgfpointpolar{\pgf@nfold@cur@startangle}{\pgfmathresult pt}}}%
+            \else
+              % special treatment for singular curves to avoid rounding error glitches.
+              % In this special case, a slight corner at the end of the join is not avoidable
+              \let\pgf@nfold@inputsegment@supporta\pgf@nfold@segment@start
+            \fi
+          \fi
+        \fi
       \fi
     \fi
     % Step 1.2: Make space for the join at the end if needed
     \checkpgfsegmentvisible\pgf@nfold@next@segmenttype
     \ifpgf@nfold@segm@visible%
-      \pgfmathparse{abs(\pgf@nfold@deltaphi@end) > 178}
-      \ifnum\pgfmathresult=1\relax
-        % we go full backwards, don't relocate the start
+      \pgf@xb=\pgf@nfold@deltaphi@end pt\relax
+      \ifdim\pgf@xb<0pt\relax
+        \pgf@xb=-\pgf@xb
+      \fi
+      \ifdim\pgf@xb>178pt\relax
         \pgfutil@packagewarning{tikz-nfold}{Angle too sharp, expect visual errors}
+        \pgf@nfold@angletoosharptrue
       \else
-        \pgfmathsetlengthmacro{\pgf@nfold@shortenendjoin}%
-          {\pgf@nfold@hwidth*abs(tan(0.5*\pgf@nfold@deltaphi@end))}
-        \pgfextract@process\pgf@nfold@segment@end{%
-          \pgfpointadd{\pgf@nfold@inputsegment@last}%
-                      {\pgfpointpolar{\pgf@nfold@cur@endangle}{-\pgf@nfold@shortenendjoin}}}%
+        \ifdim\pgf@xb>0.5pt\relax
+           % make space for the start join if the angle is nonzero
+          \pgf@yb=.5\pgf@xb
+          \pgfmathtan@{\pgf@yb}
+          \pgf@yb=\pgf@nfold@hwidth
+          \pgf@yb=\pgfmathresult\pgf@yb
+          \edef\pgf@nfold@shortenendjoin{\the\pgf@yb}
+          \pgf@yb=-\pgf@yb
+          \pgfextract@process\pgf@nfold@segment@end{%
+            \pgfpointadd{\pgf@nfold@inputsegment@last}%
+                        {\pgfqpointpolar{\pgf@nfold@cur@endangle}{\pgf@yb}}}%
+          \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto
+            % For a curve we need to relocate the @supporta point as well, as otherwise the @first point
+            % might overtake it
+            \pgfpointdiff{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@inputsegment@last}
+            \pgfmathveclen@{\pgf@x}{\pgf@y}
+            \ifdim\pgfmathresult pt>0.1pt\relax
+              % regular curves: shift supporta by sqrt(a^2 + b^2) where a is the unshifted distance and b is the shift of the first point. This way, supporta is always shifted by a strictly larger distance than first, preserving the tangent in the first control point, but the difference is always small.
+              \pgfmathveclen@{\pgfmathresult}{\pgf@nfold@shortenendjoin}
+              % can use qpoint and minus because \pgfmathresult is guaranteed to be positive
+              \pgfextract@process\pgf@nfold@inputsegment@supportb{\pgfpointadd%
+                {\pgf@nfold@inputsegment@last}%
+                {\pgfqpointpolar{\pgf@nfold@cur@endangle}{-\pgfmathresult pt}}}%
+            \else
+              % special treatment for singular curves to avoid rounding error glitches.
+              % In this special case, a slight corner at the end of the join is not avoidable
+              \let\pgf@nfold@inputsegment@supportb\pgf@nfold@segment@end
+            \fi
+          \fi
+        \fi
       \fi
       % Step 1.3: Detect an edge case
       % This edge case appears whenever the current segment is such a short line that we would
@@ -337,7 +396,7 @@
     \else
       % TODO pass the angle as a parameter instead?
       % If we draw the lines when the start angle is close to 180 degrees, we get a division by zero 
-	  \ifpgf@nfold@angletoosharp\else
+      \ifpgf@nfold@angletoosharp\else
         \let\pgf@nfold@deltaphi\pgf@nfold@deltaphi@start
         \pgf@nfold@make@join
       \fi

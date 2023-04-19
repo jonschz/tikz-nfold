@@ -231,6 +231,23 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \draw[double equal sign distance, scaling nfold=4, arrows=-Implies, purple, opacity=.5] (0,0) -- (1,0);
 \end{tikzpicture}
 
+\subsection{Singular and almost singular curves}
+
+\subsubsection{Exactly singular}
+\begin{tikzpicture}
+  \draw[double distance=5pt, nfold] (.5,1) -- (1,0) .. controls (1,0) and (1.1, 1) .. (2,1);
+  \draw[red] (.5,1) -- (1,0) .. controls (1,0) and (1,1) .. (2,1);
+  \draw[double distance=5pt, nfold] (4,1) .. controls (3.1,1) and (3,0) .. (3,0) --  (2.5,1);
+\end{tikzpicture}
+
+\subsubsection{Almost singular}
+\begin{tikzpicture}
+  \draw[double distance=5pt, nfold] (.5,1) -- (1,0) .. controls (1,.1) and (1.1,1) .. (2,1);
+  \draw[red] (.5,1) -- (1,0) .. controls (1,0) and (1.1,1) .. (2,1);
+  \draw[double distance=5pt, nfold] (4,1) .. controls (3.1,1) and (3,.1) .. (3,0) --  (2.5,1);
+\end{tikzpicture}
+Both the larger discrepancy between the red line and the double path and the slight corner at the join are expected.
+
 \section{Checking for undesired global effects}
 
 \begin{tikzpicture}[line join=miter, miter limit=10, x={(1.1cm,0)}, y={(0,1.1cm)}]
