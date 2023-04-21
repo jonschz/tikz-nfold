@@ -171,7 +171,7 @@
     \pgfpatharc%
       {\pgf@nfold@previous@endangle+90*\turnindicator}%
       {\targetang+90*\turnindicator}%
-      {abs(\pgf@shiftdec@fraction)*\pgf@nfold@hwidth}%
+      {abs(\pgf@nfold@shift@fraction)*\pgf@nfold@hwidth}%
   \else
     \pgf@nfold@miterjoin
   \fi
@@ -198,7 +198,7 @@
     \fi
     % \insidepercentage: between 0.0 and 1.0;
     % 0=no distance to cover in the join, 1=maximum distance to cover
-    \pgfmathsetmacro{\insidepercentage}{-.5*\turnindicator*\pgf@shiftdec@fraction+.5}
+    \pgfmathsetmacro{\insidepercentage}{-.5*\turnindicator*\pgf@nfold@shift@fraction+.5}
     \if m\pgf@cached@linejoin% \ifx is not needed because both are only one character
       % miter join
       % First we implement the miter limit: If the angle is too sharp, the miter join is replaced
@@ -495,8 +495,8 @@
         \pgfpathcurveto{\pgfqpoint{1pt}{-0.05pt}}{\pgfqpoint{-0.75pt}{-1.25pt}}{\pgfqpoint{-1.4pt}{-2.65pt}}
       }{
         % extend the body to intersect the tip
-        \pgfpathmoveto{\pgfqpoint{-3pt}{\pgf@shiftdec@fraction pt}}
-        \pgfpathlineto{\pgfqpoint{3pt}{\pgf@shiftdec@fraction pt}}
+        \pgfpathmoveto{\pgfqpoint{-3pt}{\pgf@nfold@shift@fraction pt}}
+        \pgfpathlineto{\pgfqpoint{3pt}{\pgf@nfold@shift@fraction pt}}
       }
       \ifnum\pgfintersectionsolutions>0
         \pgfextract@process\pgf@nfold@arrowintersect{\pgfpointintersectionsolution{1}}%
@@ -506,7 +506,7 @@
       \else
         % this is a failsafe and should never be reached
         \pgfutil@packagewarning{tikz-nfold}{did not find intersection}
-        \pgfextract@process\pgf@nfold@arrowintersect{\pgfqpoint{0pt}{\pgf@shiftdec@fraction pt}}%
+        \pgfextract@process\pgf@nfold@arrowintersect{\pgfqpoint{0pt}{\pgf@nfold@shift@fraction pt}}%
       \fi
     \fi% if precomputed
   % Step 2: Extend the arrow body to the intersection point.
@@ -527,7 +527,7 @@
     \fi
     % we don't want to undo the shift by .42\pgflinewidth after the scaling
     \pgfutil@tempdima=\pgf@nfold@hwidth
-    \pgfutil@tempdima=\pgf@shiftdec@fraction\pgfutil@tempdima
+    \pgfutil@tempdima=\pgf@nfold@shift@fraction\pgfutil@tempdima
     \pgfextract@process\pgf@nfold@startofextension
       {\pgfpointtransformed{\pgfqpoint{0pt}{\pgfutil@tempdima}}}
     % 0.5 - 0.06 = 0.42
@@ -988,9 +988,9 @@
 }
 
 \def\pgf@nfold@loop@inner{%
-  \pgfmathsetmacro{\pgf@shiftdec@fraction}%
+  \pgfmathsetmacro{\pgf@nfold@shift@fraction}%
     {-1+2*(\pgf@nfold@index-1)/(\pgf@nfold@order-1)}
-  \pgfmathsetlengthmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@shiftdec@fraction}
+  \pgfmathsetlengthmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@nfold@shift@fraction}
   \pgf@nfold@traversepath%
   \pgfsyssoftpath@flushcurrentpath%
   \pgf@up@action%
@@ -1035,12 +1035,12 @@
     \pgf@x=\pgf@nfold@hwidth\relax
     \ifdim\pgf@x<0pt\relax
       \pgf@x=-\pgf@x
-      \def\pgf@shiftdec@fraction{-1}
+      \def\pgf@nfold@shift@fraction{-1}
     \else
-      \def\pgf@shiftdec@fraction{1}
+      \def\pgf@nfold@shift@fraction{1}
     \fi
     \edef\pgf@nfold@hwidth{\the\pgf@x}
-    \pgfoffsetpathqfraction{#1}{\pgf@nfold@hwidth}{\pgf@shiftdec@fraction}
+    \pgfoffsetpathqfraction{#1}{\pgf@nfold@hwidth}{\pgf@nfold@shift@fraction}
   \endgroup
 }
 
@@ -1052,16 +1052,16 @@
 \def\pgfoffsetpathfraction#1#2#3{%
   \begingroup
     \pgfmathsetlengthmacro\pgf@nfold@hwidth{#2}
-    \pgfmathsetmacro\pgf@shiftdec@fraction{#3}
-    \pgfoffsetpathqfraction{#1}{\pgf@nfold@hwidth}{\pgf@shiftdec@fraction}
+    \pgfmathsetmacro\pgf@nfold@shift@fraction{#3}
+    \pgfoffsetpathqfraction{#1}{\pgf@nfold@hwidth}{\pgf@nfold@shift@fraction}
   \endgroup
 }
 
 % This has the same output as the #3-th segment of nfold=#4.
 \def\pgfoffsetpathindex#1#2#3#4{%
   \begingroup
-    \pgfmathsetmacro\pgf@shiftdec@fraction{-1+2*(#3-1)/(#4-1)}
-    \pgfoffsetpathqfraction{#1}{#2}{\pgf@shiftdec@fraction}
+    \pgfmathsetmacro\pgf@nfold@shift@fraction{-1+2*(#3-1)/(#4-1)}
+    \pgfoffsetpathqfraction{#1}{#2}{\pgf@nfold@shift@fraction}
   \endgroup
 }
 
@@ -1072,8 +1072,8 @@
     \pgf@nfold@parsesoftpath{\cachedpath}{\parsedsoftpath}
     \pgf@x=#2\relax
     \edef\pgf@nfold@hwidth{\the\pgf@x}
-    \edef\pgf@shiftdec@fraction{#3}
-    \pgf@x=\pgf@shiftdec@fraction\pgf@x\relax
+    \edef\pgf@nfold@shift@fraction{#3}
+    \pgf@x=\pgf@nfold@shift@fraction\pgf@x\relax
     \edef\pgf@nfold@shiftamount{\the\pgf@x}
     \pgf@nfold@traversepath%
   \endgroup
