@@ -289,9 +289,10 @@
         \ifdim\pgf@xb>0.5pt\relax
            % make space for the start join if the angle is nonzero
           \pgf@yb=.5\pgf@xb
-          \pgfmathtan@{\pgf@yb}
-          \pgf@yb=\pgf@nfold@hwidth
+          \pgfmathtan@{\pgf@sys@tonumber\pgf@yb}
+          \pgf@yb=\pgf@nfold@hwidth\relax
           \pgf@yb=\pgfmathresult\pgf@yb
+          % shortenstartjoin = hwidth*tan(.5*abs(deltaphi@start))
           \edef\pgf@nfold@shortenstartjoin{\the\pgf@yb}
           \pgfextract@process\pgf@nfold@segment@start{%
             \pgfpointadd{\pgf@nfold@inputsegment@first}%
@@ -299,19 +300,17 @@
           \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto
             % For a curve we need to relocate the @supporta point as well, as otherwise the @first point
             % might overtake it
-            \pgfpointdiff{\pgf@nfold@inputsegment@first}{\pgf@nfold@inputsegment@supporta}
-%            \pgfoffset@abssum\pgf@xa
-%            \pgfmathparse{veclen(\pgf@x,\pgf@y)}
-            \pgfmathveclen@{\pgf@x}{\pgf@y}
+            \pgf@process{\pgfpointdiff{\pgf@nfold@inputsegment@first}{\pgf@nfold@inputsegment@supporta}}
+            \pgfmathveclen@{\pgf@sys@tonumber\pgf@x}{\pgf@sys@tonumber\pgf@y}
             \ifdim\pgfmathresult pt>0.1pt\relax
-              \pgfwarning{offsetting start}
-              % regular curves: shift supporta by sqrt(a^2 + b^2) where a is the unshifted distance and b is the shift of the first point. This way, supporta is always shifted by a strictly larger distance than first, preserving the tangent in the first control point, but the difference is always small.
-              \pgfmathveclen@{\pgfmathresult}{\pgf@nfold@shortenstartjoin}
+              % regular curves (supporta != first):
+              % Increase dist(first, supporta) to sqrt(a^2 + b^2) where a=dist(first, supporta) and b=shortenstart. This way, the order of first and supporta is guaranteed to be preserved, and the change to supporta is as small as reasonably possible.
+              \pgfmathveclen@{\pgfmathresult}{\pgf@sys@tonumber\pgf@yb}
               \pgfextract@process\pgf@nfold@inputsegment@supporta{\pgfpointadd%
                 {\pgf@nfold@inputsegment@first}%
-                {\pgfpointpolar{\pgf@nfold@cur@startangle}{\pgfmathresult pt}}}%
+                {\pgfqpointpolar{\pgf@nfold@cur@startangle}{\pgfmathresult pt}}}%
             \else
-              % special treatment for singular curves to avoid rounding error glitches.
+              % special treatment for singular curves (supporta = first) to avoid rounding error glitches.
               % In this special case, a slight corner at the end of the join is not avoidable
               \let\pgf@nfold@inputsegment@supporta\pgf@nfold@segment@start
             \fi
@@ -333,29 +332,26 @@
         \ifdim\pgf@xb>0.5pt\relax
            % make space for the start join if the angle is nonzero
           \pgf@yb=.5\pgf@xb
-          \pgfmathtan@{\pgf@yb}
-          \pgf@yb=\pgf@nfold@hwidth
+          \pgfmathtan@{\pgf@sys@tonumber\pgf@yb}
+          \pgf@yb=\pgf@nfold@hwidth\relax
           \pgf@yb=\pgfmathresult\pgf@yb
+          % shortenendjoin = hwidth*tan(.5*abs(deltaphi@end))
           \edef\pgf@nfold@shortenendjoin{\the\pgf@yb}
           \pgf@yb=-\pgf@yb
           \pgfextract@process\pgf@nfold@segment@end{%
             \pgfpointadd{\pgf@nfold@inputsegment@last}%
                         {\pgfqpointpolar{\pgf@nfold@cur@endangle}{\pgf@yb}}}%
           \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto
-            % For a curve we need to relocate the @supporta point as well, as otherwise the @first point
-            % might overtake it
-            \pgfpointdiff{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@inputsegment@last}
-            \pgfmathveclen@{\pgf@x}{\pgf@y}
+            % Same procedure as above: relocate supportb if we have a curve
+            \pgf@process{\pgfpointdiff{\pgf@nfold@inputsegment@supportb}{\pgf@nfold@inputsegment@last}}
+            \pgfmathveclen@{\pgf@sys@tonumber\pgf@x}{\pgf@sys@tonumber\pgf@y}
             \ifdim\pgfmathresult pt>0.1pt\relax
-              % regular curves: shift supporta by sqrt(a^2 + b^2) where a is the unshifted distance and b is the shift of the first point. This way, supporta is always shifted by a strictly larger distance than first, preserving the tangent in the first control point, but the difference is always small.
-              \pgfmathveclen@{\pgfmathresult}{\pgf@nfold@shortenendjoin}
+              \pgfmathveclen@{\pgfmathresult}{\pgf@sys@tonumber\pgf@yb}
               % can use qpoint and minus because \pgfmathresult is guaranteed to be positive
               \pgfextract@process\pgf@nfold@inputsegment@supportb{\pgfpointadd%
                 {\pgf@nfold@inputsegment@last}%
                 {\pgfqpointpolar{\pgf@nfold@cur@endangle}{-\pgfmathresult pt}}}%
             \else
-              % special treatment for singular curves to avoid rounding error glitches.
-              % In this special case, a slight corner at the end of the join is not avoidable
               \let\pgf@nfold@inputsegment@supportb\pgf@nfold@segment@end
             \fi
           \fi
@@ -750,7 +746,7 @@
 \def\pgf@nfold@parselineto#1#2{%
   % remove degenerate line segments (reduces glitches)
   \pgf@process{\pgfpointdiff{\pgfpoint@nfold@lastparsed}{\pgf@x#1\pgf@y#2}}
-  \pgfoffset@abssum\pgf@xa
+  \pgfpointtaxicabnorm\pgf@xa
   \ifdim\pgf@xa>.1pt\relax
     \edef\pgf@nfold@temp{%
       \noexpand\pgf@nfold@inputsegmentobject@lineto{\pgfpoint@nfold@lastparsed}{\pgf@x#1\pgf@y#2}%

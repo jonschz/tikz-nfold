@@ -69,7 +69,7 @@ Note that this is \emph{not} called by TikZ' \texttt{rectangle} option.
 \end{pgfpicture}
 
 \subsection{An example where \textbackslash pgf@prepare@start@of@path is not called}
-In this example, the nfold preparation code must be injected into \verb|\pgf@path@check@proper|.
+Here the nfold preparation code must be injected into \verb|\pgf@path@check@proper|.
 {
 \makeatletter
 \def\pgf@prepare@start@of@path{\pgferror{not called}}
@@ -245,7 +245,7 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \draw[double distance=5pt, nfold] (.5,1) -- (1,0) .. controls (1,.1) and (1.1,1) .. (2,1);
   \draw[red] (.5,1) -- (1,0) .. controls (1,0) and (1.1,1) .. (2,1);
   \draw[double distance=5pt, nfold] (4,1) .. controls (3.1,1) and (3,.1) .. (3,0) --  (2.5,1);
-\end{tikzpicture}
+\end{tikzpicture}\\
 Both the larger discrepancy between the red line and the double path and the slight corner at the join are expected.
 
 \section{Checking for undesired global effects}
