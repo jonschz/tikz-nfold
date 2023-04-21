@@ -161,6 +161,7 @@
     \pgfpointadd{\pgf@nfold@join@start}{\pgfpointpolar{\pgf@nfold@previous@endangle}{\pgf@nfold@shortenstartjoin}}
     \pgfpathlineto{}
     % Check if the angles are in the correct range; under some conditions we must add or subtract 360
+    % TODO can this code be simplified before we refactor the \pgfmathparse calls?
     \pgfmathparse{\turnindicator*(\pgf@nfold@cur@startangle-\pgf@nfold@previous@endangle)}
     \ifdim\pgfmathresult pt>0pt\relax
       \pgfmathsetmacro{\targetang}{\pgf@nfold@cur@startangle-\turnindicator*360}
@@ -184,13 +185,12 @@
   \pgfextract@process\pgf@nfold@join@end{%
     \pgfpointadd{\pgf@nfold@segment@start}
                 {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@nfold@shiftamount}}}%
-  \pgfpointdiff{\pgf@nfold@join@start}{\pgf@nfold@join@end}
-  % Check if the start of this segment is too close to the end of the previous segment.
-  % In that case we don't insert a join segment, as it would look rather glitchy.
-  % We use the Manhattan length for performance and to avoid 'dimension too large' errors.
-  \pgfmathparse{abs(\pgf@x) + abs(\pgf@y)}
-  \ifdim\pgfmathresult pt>0.1pt\relax
-    % First step: Check if left or right turn (-1 = left, 1=right)
+  \pgf@process{\pgfpointdiff{\pgf@nfold@join@start}{\pgf@nfold@join@end}}
+  % Check if the start of this segment is very close to the end of the previous segment.
+  % In that case we don't need a join at all
+  \pgfpointtaxicabnorm\pgf@xa
+  \ifdim\pgf@xa>0.1pt\relax
+    % First step: Check if left or right turn (-1=left, 1=right)
     \ifdim\pgf@nfold@deltaphi pt<0pt
       \def\turnindicator{1}
     \else
@@ -203,9 +203,14 @@
       % miter join
       % First we implement the miter limit: If the angle is too sharp, the miter join is replaced
       % by a bevel join. This is controlled by /tikz/miter limit=..., initially 10.
-      \pgfmathsetmacro{\mitercosine}{abs(cos(.5*\pgf@nfold@deltaphi))}
-      \pgfmathparse{\mitercosine*\pgf@nfold@cached@miterlimit}
-      \ifdim\pgfmathresult pt>1pt\relax
+      \pgf@xa=\pgf@nfold@deltaphi pt\relax
+      \pgf@xa=.5\pgf@xa
+      \pgfmathcos@{\pgf@sys@tonumber\pgf@xa}
+      \pgf@xa=\pgfmathresult pt\relax
+      \pgf@xa=\pgf@nfold@cached@miterlimit\pgf@xa
+      % Check if miterlimit*cos(.5*deltaphi) > 1;
+      % cos(.5*deltaphi) >= 0 because -180 <= deltaphi <= 180
+      \ifdim\pgf@xa>1pt\relax
         \pgf@nfold@miterjoin
       \else
         \pgf@nfold@beveljoin
@@ -230,8 +235,9 @@
     \pgf@nfold@join@end% default point to connect to
     \ifpgf@nfold@closejoinsedgecase%
       \ifdim\insidepercentage pt<.5pt\relax%
-        \pgfpointadd{\pgf@nfold@segment@end}%
-        {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@nfold@shiftamount}}
+        \pgf@process{\pgfpointadd%
+          {\pgf@nfold@segment@end}%
+          {\pgfpointpolar{\pgf@nfold@cur@startangle+90}{\pgf@nfold@shiftamount}}}
       \fi%
     \fi
     \pgfpathlineto{}
@@ -368,8 +374,10 @@
         % No need to check for \pgf@nfold@inputsegmentclosepath as it should not be followed by any further segments
         % Now: Check if the total amount of shortening is larger than the length of the segment
         \pgfpointdiff{\pgf@nfold@inputsegment@first}{\pgf@nfold@inputsegment@last}
-        \pgfmathparse{\pgf@nfold@shortenstartjoin+\pgf@nfold@shortenendjoin > veclen(\pgf@x,\pgf@y)}
-        \ifnum\pgfmathresult=1\relax
+        \pgfmathveclen@{\pgf@sys@tonumber\pgf@x}{\pgf@sys@tonumber\pgf@y}
+        \pgf@xa=\pgf@nfold@shortenstartjoin\relax
+        \advance\pgf@xa by\pgf@nfold@shortenendjoin\relax
+        \ifdim\pgf@xa>\pgfmathresult pt\relax
           \pgf@nfold@closejoinsedgecasetrue
         \fi
       \fi
@@ -390,8 +398,7 @@
         \pgfpathmoveto{}
        \fi
     \else
-      % TODO pass the angle as a parameter instead?
-      % If we draw the lines when the start angle is close to 180 degrees, we get a division by zero 
+      % If we draw the join when the start angle is close to 180 degrees, we get a division by zero
       \ifpgf@nfold@angletoosharp\else
         \let\pgf@nfold@deltaphi\pgf@nfold@deltaphi@start
         \pgf@nfold@make@join
@@ -400,7 +407,7 @@
   \fi% end if current segment visible
   % Step 2.2: Store where the current (non-offset) end point was relocated
   % in order to make space for the end join. This will be used
-  % when wed draw the join at the start of the next segment
+  % when we draw the join at the start of the next segment
   \ifx\pgf@nfold@next@inputsegment\pgf@nfold@inputsegmentmoveto\else
     \let\pgf@nfold@previous@joinend\pgf@nfold@segment@end
   \fi
