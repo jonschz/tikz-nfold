@@ -19,34 +19,6 @@
 \usetikzlibrary{arrows.meta}
 \usepgflibrary{bezieroffset}
 
-%%%%%%%%
-% TODO %
-%%%%%%%%
-%
-% Near future
-% -----------
-% - various inline TODOs in this file
-% - can we remove some or all of \global, \gdef, \xdef now?
-%
-%
-% Later
-% -----
-% - Reuse results of tangent and angle computations
-%   - at the moment, the start/end tangents and angles of segments are computed 3 (?) times
-% - add "\else" in various places (likely better performance)
-% - consider turning this into a pgf library, as it does not need TikZ
-%   - only define /tikz/nfold in the skeleton tikz library
-% - pull request to TikZ/pgf to simplify code injection
-% - Do the subdivision of Bezier curves while parsing the soft path -> saves a lot of redundant calls
-% - benchmark: Compare
-%   - decorations approach
-%   - new approach
-%   - /tikz/double (i.e. not doing anything)
-%   - Also: do the testing with nfold auto-set to 2 for a more realistic comparison with /tikz/double
-% - fix closepath
-% - branch + pull request
-
-
 
 %
 % Intercepting join settings
@@ -90,16 +62,16 @@
 % -----------------------
 
 % check if a segment is visible, i.e. not moveto or last
-% TODO add else's + error if not in the list
 \newif\ifpgf@nfold@segm@visible
 \def\checkpgfsegmentvisible#1{%
   \pgf@nfold@segm@visiblefalse%
   \ifx#1\pgf@nfold@inputsegmentlineto%
-  \pgf@nfold@segm@visibletrue\fi%
-  \ifx#1\pgf@nfold@inputsegmentcurveto%
-  \pgf@nfold@segm@visibletrue\fi%
-  \ifx#1\pgf@nfold@inputsegmentclosepath%
-  \pgf@nfold@segm@visibletrue\fi%
+    \pgf@nfold@segm@visibletrue%
+  \else\ifx#1\pgf@nfold@inputsegmentcurveto%
+    \pgf@nfold@segm@visibletrue
+  \else\ifx#1\pgf@nfold@inputsegmentclosepath%
+    \pgf@nfold@segm@visibletrue
+  \fi\fi\fi
 }
 
 
@@ -118,8 +90,8 @@
   \pgfpointadd%
     {\pgf@nfold@inputsegment@first}%
     {\pgfpointpolar%
-      {\pgf@nfold@previous@endangle+.5*\pgf@nfold@deltaphi+90}% do not change
-      {\pgf@nfold@shiftamount/cos(.5*\pgf@nfold@deltaphi)}%
+      {\pgf@nfold@previous@endangle+.5*\pgf@nfold@deltaphi@start+90}% do not change
+      {\pgf@nfold@shiftamount/cos(.5*\pgf@nfold@deltaphi@start)}%
     }%
   \pgfpathlineto{}%
 }
@@ -138,12 +110,12 @@
   % dead on if the outermost offset line were centered on the _edge_ of the wide line, but we want to draw 
   % the outside line _fully inside_ the wide line. The factor of tan(deltaphi/4) can be derived, but is not obvious.
   \pgfmathsetlengthmacro{\bevelouterprotrusion}%
-    {\pgf@nfold@shortenstartjoin - .5*\pgflinewidth*abs(tan(.25*\pgf@nfold@deltaphi))}
+    {\pgf@nfold@shortenstartjoin - .5*\pgflinewidth*abs(tan(.25*\pgf@nfold@deltaphi@start))}
   % The following applies to middle lines only: We compute by how much they need to be shortened so the distance
   % between the lines in the join is correct.
-  \pgfmathsetmacro{\bevelshorten}{2*\insidepercentage*abs(tan(.25*\pgf@nfold@deltaphi))}
+  \pgfmathsetmacro{\bevelshorten}{2*\insidepercentage*abs(tan(.25*\pgf@nfold@deltaphi@start))}
   % This threshold decides if the inside line has a bevel or a miter join
-  \pgfmathparse{\bevelshorten < abs(sin(.5*\pgf@nfold@deltaphi))}
+  \pgfmathparse{\bevelshorten < abs(sin(.5*\pgf@nfold@deltaphi@start))}
   \ifnum\pgfmathresult=1\relax
     \pgfmathsetlengthmacro{\bevelextension}{\bevelouterprotrusion-\bevelshorten*\pgf@nfold@hwidth}
     \pgfpointadd{\pgf@nfold@join@start}{\pgfpointpolar{\pgf@nfold@previous@endangle}{\bevelextension}}
@@ -161,7 +133,6 @@
     \pgfpointadd{\pgf@nfold@join@start}{\pgfpointpolar{\pgf@nfold@previous@endangle}{\pgf@nfold@shortenstartjoin}}
     \pgfpathlineto{}
     % Check if the angles are in the correct range; under some conditions we must add or subtract 360
-    % TODO can this code be simplified before we refactor the \pgfmathparse calls?
     \pgfmathparse{\turnindicator*(\pgf@nfold@cur@startangle-\pgf@nfold@previous@endangle)}
     \ifdim\pgfmathresult pt>0pt\relax
       \pgfmathsetmacro{\targetang}{\pgf@nfold@cur@startangle-\turnindicator*360}
@@ -191,19 +162,24 @@
   \pgfpointtaxicabnorm\pgf@xa
   \ifdim\pgf@xa>0.1pt\relax
     % First step: Check if left or right turn (-1=left, 1=right)
-    \ifdim\pgf@nfold@deltaphi pt<0pt
+    \ifdim\pgf@nfold@deltaphi@start pt<0pt
       \def\turnindicator{1}
     \else
       \def\turnindicator{-1}
     \fi
     % \insidepercentage: between 0.0 and 1.0;
     % 0=no distance to cover in the join, 1=maximum distance to cover
-    \pgfmathsetmacro{\insidepercentage}{-.5*\turnindicator*\pgf@nfold@shift@fraction+.5}
+    \pgf@xa=\pgf@nfold@shift@fraction pt\relax
+    \pgf@xa=\turnindicator\pgf@xa
+    \advance\pgf@xa by-1pt\relax
+    \pgf@xa=-.5\pgf@xa
+    % \insidepercentage  = .5 * (1 - \turnindicator*\pgf@nfold@shift@fraction)
+    \edef\insidepercentage{\pgf@sys@tonumber\pgf@xa}
     \if m\pgf@cached@linejoin% \ifx is not needed because both are only one character
       % miter join
       % First we implement the miter limit: If the angle is too sharp, the miter join is replaced
       % by a bevel join. This is controlled by /tikz/miter limit=..., initially 10.
-      \pgf@xa=\pgf@nfold@deltaphi pt\relax
+      \pgf@xa=\pgf@nfold@deltaphi@start pt\relax
       \pgf@xa=.5\pgf@xa
       \pgfmathcos@{\pgf@sys@tonumber\pgf@xa}
       \pgf@xa=\pgfmathresult pt\relax
@@ -286,7 +262,6 @@
       \ifdim\pgf@xb<0pt\relax
         \pgf@xb=-\pgf@xb
       \fi
-      % TODO Future idea: Also check if we move backwards further than the length of the line plus one (or two) hwidth's
       \ifdim\pgf@xb>178pt\relax
         % we go full backwards, don't relocate the start and disable the join to avoid division by zero
         \pgfutil@packagewarning{tikz-nfold}{Angle too sharp, expect visual errors}
@@ -317,7 +292,7 @@
                 {\pgfqpointpolar{\pgf@nfold@cur@startangle}{\pgfmathresult pt}}}%
             \else
               % special treatment for singular curves (supporta = first) to avoid rounding error glitches.
-              % In this special case, a slight corner at the end of the join is not avoidable
+              % In this special case, a slight corner at the end of the join is unavoidable
               \let\pgf@nfold@inputsegment@supporta\pgf@nfold@segment@start
             \fi
           \fi
@@ -400,7 +375,6 @@
     \else
       % If we draw the join when the start angle is close to 180 degrees, we get a division by zero
       \ifpgf@nfold@angletoosharp\else
-        \let\pgf@nfold@deltaphi\pgf@nfold@deltaphi@start
         \pgf@nfold@make@join
       \fi
     \fi
