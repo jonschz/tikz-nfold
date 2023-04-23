@@ -240,15 +240,17 @@ This package is far from perfect, and even if it were, there would still be some
 \end{tkzexample}
   This cannot be fixed without extensive use of the \texttt{intersections} library, hurting the performance, and the result might still not look great for orders $\geq 3$.
   \item Very short \emph{curves} with large angles at the ends result in a glitched output:
-\begin{tkzexample}[latex=3.5cm]
+\begin{tkzexample}[latex=3.75cm]
 \begin{tikzpicture}
-  \draw[black] (1, 0) -- (3,0) -- (2, 1.2) -- (4, .8);
-  \draw[blue, double distance=.5cm, nfold] (1, 0) -- (3,0)
-     to[relative, out=1, in=179] (2, 1.2) -- (4, .8);
+  \draw[black] (1,0) -- (3,0) -- (1.5,1.2) -- (4,0.8);
+  \draw[red, line width=1pt, double distance=.6cm, nfold]
+    (1,0) -- (3,0) -- (1.5, 1.2) -- (4,0.8);
+  \draw[blue, double distance=.6cm, nfold] (1,0) -- (3,0)
+    to[relative, out=1, in=179] (1.5, 1.2) -- (4,0.8);
 \end{tikzpicture}
 \end{tkzexample}
-  This issue has been fixed for \emph{straight lines} in version \texttt{0.0.2}, but it is much harder to fix for curves.
-  \item changing joins in \verb|\pgfsys@beginscope| without an accompanying \TeX{} group may cause inconsistent behaviour in the joins. For example:
+  This issue has been fixed for \emph{straight lines} in version \texttt{0.1.0} (note how the red line is offset correctly), but it is much harder to fix for curves.
+  \item Changing joins in \verb|\pgfsys@beginscope| without an accompanying \TeX{} group may cause inconsistent behaviour in the joins:
 \begin{tkzexample}[latex=2cm]
 \makeatletter
 \begin{tikzpicture}[line join=miter, line width=2pt]
@@ -259,7 +261,7 @@ This package is far from perfect, and even if it were, there would still be some
 \end{tikzpicture}
 \makeatother
 \end{tkzexample}
-  has \texttt{round} joins on the large path, but \texttt{miter} joins on the constituent paths. This problem does not occur with \verb|\pgfscope|.
+  This example has \texttt{round} joins on the large path, but \texttt{miter} joins on the constituent paths. This problem does not occur with \verb|\pgfscope|.
 \end{itemize}
 
 
@@ -282,23 +284,27 @@ to only import the base layer library. The following commands are provided:
 The following macros offset an entire soft path. These are part of the TikZ library \nfold.
 \begin{itemize}
   \item \verb|\pgfoffsetpath{softpath}{length}|: This macro offsets \texttt{softpath} by \texttt{length}. The latter may be negative.
-  \item \verb|\pgfoffsetpathfraction{softpath}{hwidth}{fraction}|: This macro offsets the \texttt{softpath} by \texttt{fraction*hwidth}. Note that the output is \emph{not} equal to the previous macro with \texttt{length=fraction*hwidth} because the joins are treated differently -- see the examples below. Further note that \texttt{length=0} does \emph{not} reproduce the input path, but instead outputs a path that is centred on the input path with length
+  \item \verb|\pgfoffsetpathfraction{softpath}{hwidth}{fraction}|: This macro offsets the \texttt{softpath} by \texttt{fraction*hwidth}. Note that the output is \emph{not} equal to the previous macro with \texttt{length=fraction*hwidth} because the joins are treated differently -- see the examples below. Further note that \texttt{length=0} does \emph{not} reproduce the input path.
   \item \verb|\pgfoffsetpathqfraction|: This macro is a quicker version of the previous macro  does not parse the input values using the \texttt{pgfmath}-engine.
   \item \verb|\pgfoffsetpathindex{softpath}{width}{i}{n}|: In this convenience method, \texttt{i} and \texttt{n} are integers with $1 \leq i \leq n$. This corresponds to \texttt{fraction=-1} for \texttt{i=1} and \texttt{fraction=1} for \texttt{i=n}, and is capable of reproducing the output of \nfold{} (albeit less efficient).
 \end{itemize}
-
+In the following example we see how \verb|\pgfoffsetpath{..}{0pt}| reproduces the input path (rendered in black) and how \verb|\pgfoffsetpathfraction{..}{8pt}{0}| differs from the former.
 \begin{tkzexample}[latex=4cm]
 \begin{tikzpicture}[line join=bevel]
   \path[save path=\savedpath] (0,0) -- (1,0)
-    to[out=0, in=-90] (1,3) -- (3,2);
+    to[out=0, in=-80] (1,3) -- (3,2);
+  \draw[color=lightgray,line width=16pt,use path=\savedpath];
   \pgfoffsetpath{\savedpath}{0pt}
   \color{black} \pgfusepathqstroke
   \pgfoffsetpath{\savedpath}{8pt}
-  \color{red} \pgfusepathqstroke
+  \color{blue} \pgfusepathqstroke
   \pgfoffsetpath{\savedpath}{-8pt}
   \color{green} \pgfusepathqstroke
+  \pgfoffsetpathfraction{\savedpath}{8pt}{0}
+  \pgfsetstrokeopacity{.7} \color{red} \pgfusepathqstroke
 \end{tikzpicture}
 \end{tkzexample}
+Here we see how the commands can be used to customise $n$-fold paths:
 \begin{tkzexample}[latex=4cm]
 \begin{tikzpicture}
   \path[save path=\mypath] (0,0) -- (2,0) arc(-90:90:1)
