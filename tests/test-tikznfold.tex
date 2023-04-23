@@ -24,7 +24,7 @@ If \texttt{/tikz/nfold} were to set \verb"\pgf@nfold@order" directly, TikZ would
 \subsection{Saving and offsetting a soft path}
 
 \subsubsection{Using \textbackslash pgfoffsetpath}
-\begin{tikzpicture}[line join=bevel]%
+\begin{tikzpicture}[line join=bevel]
   \path[save path=\savedpath] (0,0) -- (.75,0) to[out=0, in=-90] (1,1.25) -- (2,1);
   \pgfoffsetpath{\savedpath}{0pt}
   \color{black}
@@ -41,7 +41,7 @@ If \texttt{/tikz/nfold} were to set \verb"\pgf@nfold@order" directly, TikZ would
 \end{tikzpicture}
 
 \subsubsection{Using methods that scale correctly}
-\begin{tikzpicture}[line join=bevel]%
+\begin{tikzpicture}[line join=bevel]
   \path[draw=gray, save path=\savedpath] (0,0) -- (1,0) to[out=0, in=-90] (1,1.25) -- (2,1);
   % Note how the path offset by 0 differs from the original path
   \pgfoffsetpathfraction{\savedpath}{6pt}{0}
@@ -58,7 +58,7 @@ If \texttt{/tikz/nfold} were to set \verb"\pgf@nfold@order" directly, TikZ would
 \subsection{Support for pgf rectangles}
 Note that this is \emph{not} called by TikZ' \texttt{rectangle} option.
 
-\begin{pgfpicture}%%%
+\begin{pgfpicture}
   \pgfpathmoveto{\pgfpoint{-1cm}{-1cm}}
   \pgfpathlineto{\pgfpoint{1cm}{-1cm}}
   \pgfpathrectangle{\pgfpointorigin}{\pgfpoint{20pt}{20pt}}

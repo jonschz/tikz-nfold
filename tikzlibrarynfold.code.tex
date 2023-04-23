@@ -380,11 +380,9 @@
     \fi
   \fi% end if current segment visible
   % Step 2.2: Store where the current (non-offset) end point was relocated
-  % in order to make space for the end join. This will be used
-  % when we draw the join at the start of the next segment
-  \ifx\pgf@nfold@next@inputsegment\pgf@nfold@inputsegmentmoveto\else
-    \let\pgf@nfold@previous@joinend\pgf@nfold@segment@end
-  \fi
+  % in order to make space for the end join. This may be used if the next
+  % segment begins with a join
+  \let\pgf@nfold@previous@joinend\pgf@nfold@segment@end
   %
   % Step 3: Draw the new segment.
   %
@@ -804,7 +802,6 @@
 }%
 
 
-%% Components of the path, modified
 \def\pgf@nfold@inputsegmentfirst{first}%
 \def\pgf@nfold@inputsegmentmoveto{moveto}%
 \def\pgf@nfold@inputsegmentlineto{lineto}%
@@ -889,7 +886,6 @@
 \def\pgf@nfold@clampangle{
   % The computed angles are values between 0 and 360, so their difference is between 360 and -360;
   % we want the difference to be between -180 and 180
-  % This can also be done using one \pgfmathparse and Mod, but this is more efficient
   \ifdim\pgfmathresult pt<-180pt\relax
     \pgfutil@tempdima=\pgfmathresult pt
     \advance\pgfutil@tempdima by 360pt

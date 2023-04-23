@@ -32,6 +32,7 @@
 \usepackage{amsmath}
 \usepackage{amsthm}
 \usepackage[capitalize]{cleveref}
+\usepackage{datetime}
 
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
@@ -51,12 +52,12 @@
 
 \title{The \textsf{tikz-nfold} package}
 \author{Jonathan Schulz}
-\date{March 2023}
+\date{\monthname{} \the\year}
 
 \maketitle
 
 \begin{abstract}
-  This package provides an alternative to TikZ' \verb|/tikz/double| option, avoiding some shortcomings of the original approach. It also provides an option to draw triple, quadruple, and n-fold paths, and furthermore allows exact offsetting of arbitrary paths.
+  This package provides an alternative to TikZ' \verb|/tikz/double| option, avoiding some shortcomings of the original approach. Further features include options to draw triple, quadruple, and n-fold paths as well as macros to offset arbitrary paths.
 \end{abstract}
 
 \section*{Compatibility}
@@ -323,9 +324,10 @@ Here we see how the commands can be used to customise $n$-fold paths:
   \item \textbf{v0.1.0}: Major overhaul
   \begin{itemize}
     \item Support for arbitrary arrow tips
+    \item Support for directly offsetting soft paths
+    \item New key \texttt{/tikz/scaling nfold}
     \item The \texttt{decorations} library was dropped
     \item Various performance improvements in \texttt{bezieroffset} (thanks to \hbox{Qrrbrbirlbel})
-    \item Support for directly offsetting soft paths
     \item Very short lines with large angles were fixed (e.g.\ in \texttt{tikzcd} with \texttt{squiggly})
     \item Numerous bugs fixed
   \end{itemize}
