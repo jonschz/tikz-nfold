@@ -10,7 +10,84 @@
 
 \begin{document}
 
-\section{Various tests}
+\section{pgf integration}
+
+\subsection{nfold path and nodes with \texttt{draw}}
+
+This used to be an issue and is the reason why \texttt{/tikz/nfold} redefines \verb"\tikz@double@setup" instead of modifying \verb"\pgf@nfold@order" directly:\\
+\begin{tikzpicture}
+  \draw[double equal sign distance, nfold=3] (0, 0) -- (1,0) node[midway, draw, label={[draw]a}] {};
+\end{tikzpicture}\\
+If \texttt{/tikz/nfold} were to set \verb"\pgf@nfold@order" directly, TikZ would attempt to render the boundary of the nodes with \texttt{nfold} enabled, which results in an error.
+
+
+\subsection{Saving and offsetting a soft path}
+
+\subsubsection{Using \textbackslash pgfoffsetpath}
+\begin{tikzpicture}[line join=bevel]
+  \path[save path=\savedpath] (0,0) -- (.75,0) to[out=0, in=-90] (1,1.25) -- (2,1);
+  \pgfoffsetpath{\savedpath}{0pt}
+  \color{black}
+  \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{3pt}
+  \color{red}
+  \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{6pt}
+  \color{blue}
+  \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{-3pt}
+  \color{green}
+  \pgfusepathqstroke
+\end{tikzpicture}
+
+\subsubsection{Using methods that scale correctly}
+\begin{tikzpicture}[line join=bevel]
+  \path[draw=gray, save path=\savedpath] (0,0) -- (1,0) to[out=0, in=-90] (1,1.25) -- (2,1);
+  % Note how the path offset by 0 differs from the original path
+  \pgfoffsetpathfraction{\savedpath}{6pt}{0}
+  \color{black}
+  \pgfusepathqstroke
+  \pgfoffsetpathqfraction{\savedpath}{6pt}{.5}
+  \color{red}
+  \pgfusepathqstroke
+  \pgfoffsetpathindex{\savedpath}{6pt}{2}{5}
+  \color{blue}
+  \pgfusepathqstroke
+\end{tikzpicture}
+
+\subsection{Support for pgf rectangles}
+Note that this is \emph{not} called by TikZ' \texttt{rectangle} option.
+
+\begin{pgfpicture}
+  \pgfpathmoveto{\pgfpoint{-1cm}{-1cm}}
+  \pgfpathlineto{\pgfpoint{1cm}{-1cm}}
+  \pgfpathrectangle{\pgfpointorigin}{\pgfpoint{20pt}{20pt}}
+  \pgfpathlineto{\pgfpoint{-1cm}{0cm}}
+  \pgfsetlinewidth{3pt}
+  \pgfsetinnerlinewidth{2pt}
+  \pgfusepath{stroke,nfold}
+\end{pgfpicture}
+
+\subsection{An example where \textbackslash pgf@prepare@start@of@path is not called}
+Here the nfold preparation code must be injected into \verb|\pgf@path@check@proper|.
+{
+\makeatletter
+\def\pgf@prepare@start@of@path{\pgferror{not called}}
+\makeatother
+\begin{pgfpicture}
+  \pgfpathmoveto{\pgfpointorigin}
+  \pgfpathlineto{\pgfpoint{1cm}{0cm}}
+  % make the path non-proper by adding a dead moveto
+  \pgfpathmoveto{\pgfpointorigin}
+  \pgfsetlinewidth{.3cm}
+  \pgfsetinnerlinewidth{.25cm}
+  \pgfsetarrows{<->}
+  \pgfusepath{stroke,tips/proper,nfold=3} % likely means "only draw tips on proper arrows"
+\end{pgfpicture}
+}
+
+
+\section{Paths and features}
 
 \subsection{Miter limit}
 
@@ -27,14 +104,15 @@
 {
   \makeatletter
   \def\clearerrormsg{\let\errormsg\pgfutil@empty}
-  \renewcommand{\pgfwarning}[1]{
+  \renewcommand{\pgfutil@packagewarning}[2]{
     \ifx\errormsg\pgfutil@empty
-      \xdef\errormsg{#1}
+      \xdef\errormsg{#2}
     \else
-      \xdef\errormsg{\errormsg; #1}
+      \xdef\errormsg{\errormsg; #2}
     \fi
   }
   \makeatother
+
   \subsubsection{Almost 180 degree turn}
   \clearerrormsg
   \begin{tikzpicture}
@@ -42,6 +120,7 @@
   \end{tikzpicture}\\
   Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
   Actual warning: \errormsg
+
   \subsubsection{Exactly 180 degree turn}
   \clearerrormsg
   \begin{tikzpicture}
@@ -79,8 +158,6 @@
 \end{tikzpicture}
 
 \subsection{Shorten}
-Shortening needs to be implemented manually, as discussed in the comments.
-
 \begin{tikzpicture}
   \draw[draw=green,opacity=.5,double distance=3pt, shorten >= 3pt, shorten <=-2pt, arrows=|-Implies] (0,0) to[bend left] (1,0);
   \draw[draw=purple, opacity=.5,double distance=3pt, shorten >= 3pt, shorten <=-2pt, arrows=|-Implies, nfold=4] (0,0) to[bend left] (1,0);
@@ -89,7 +166,6 @@ Shortening needs to be implemented manually, as discussed in the comments.
 \end{tikzpicture}
 
 \subsection{Different types of tips}
-
 \begin{tikzpicture}
   \draw[draw=green,opacity=.5,double distance=3pt, arrows=|-|] (0,0) to[bend left] (1,0);
   \draw[draw=purple, opacity=.5,double distance=3pt, arrows=|-|, nfold=4] (0,0) to[bend left] (1,0);
@@ -98,7 +174,6 @@ Shortening needs to be implemented manually, as discussed in the comments.
 \end{tikzpicture}
 
 \subsection{More extreme paths}
-
 \begin{tikzpicture}
   \draw[draw=green,opacity=.5,double distance=3pt] (0,0) .. controls (5,.9) and (5,-.8) .. (0,0);
   \draw[draw=purple, opacity=.5,double distance=3pt, nfold=3] (0,0) .. controls (5,.9) and (5,-.8) .. (0,0);
@@ -109,8 +184,7 @@ Shortening needs to be implemented manually, as discussed in the comments.
 \end{tikzpicture}
 
 \subsection{Degenerate paths and tips}
-Does not crash, which is good. However, need to consider if this is the desired behaviour.
-
+The second example has some slightly incorrect behaviour, but I don't expect many cases where this would be relevant.
 \begin{tikzpicture}
   \draw[draw=green,opacity=.5,double distance=3pt, arrows=|-|] (0,0) (.25,0) -- (.75,0) (1,0);
   \draw[draw=purple, opacity=.5,double distance=3pt, arrows=|-|, nfold=4] (0,0) (.25,0) -- (.75,0) (1,0);
@@ -124,19 +198,19 @@ Does not crash, which is good. However, need to consider if this is the desired 
 \begin{tikzpicture}
   \draw[arrows=-Implies, double equal sign distance, dashed, nfold] (0,0) -- (1,0);
   \draw[arrows=-Implies, double equal sign distance, dashed, nfold] (2,0) to[out=30, in=150] (4,0);
-\end{tikzpicture}
+\end{tikzpicture}\\
 The desynchronisation in the latter case is a fundamental limitation of this approach.
 
 
 \subsection{Short straight lines and large angles}
 
 \begin{tikzpicture}
-	\draw[green, double distance=4pt, decorate, decoration=zigzag, opacity=.5] (0,0) -- (1,0);
-	\draw[purple, double distance=4pt, decorate, decoration=zigzag, nfold, opacity=.5] (0,0) -- (1,0);
-	\draw[black,decorate, decoration=zigzag] (2,0) -- (3,0);
-	\draw[purple, double distance=7pt, decorate, decoration=zigzag, nfold, line join=round] (2,0) -- (3,0);
-	\draw[green, double distance=8pt, decorate, decoration=zigzag, opacity=.5] (4,0) -- (5,0);
-	\draw[purple, double distance=8pt, decorate, decoration=zigzag, nfold, opacity=.5] (4,0) -- (5,0);
+  \draw[green, double distance=4pt, decorate, decoration=zigzag, opacity=.5] (0,0) -- (1,0);
+  \draw[purple, double distance=4pt, decorate, decoration=zigzag, nfold, opacity=.5] (0,0) -- (1,0);
+  \draw[black,decorate, decoration=zigzag] (2,0) -- (3,0);
+  \draw[purple, double distance=7pt, decorate, decoration=zigzag, nfold, line join=round] (2,0) -- (3,0);
+  \draw[green, double distance=8pt, decorate, decoration=zigzag, opacity=.5] (4,0) -- (5,0);
+  \draw[purple, double distance=8pt, decorate, decoration=zigzag, nfold, opacity=.5] (4,0) -- (5,0);
 \end{tikzpicture}
 \vspace{1cm}
 
@@ -149,7 +223,32 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \draw[red, double distance=.32cm, nfold=2, opacity=.5] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
 \end{tikzpicture}
 
-\subsection{Checking for undesired global effects}
+\subsection{Key \texttt{/tikz/scaling nfold}}
+
+\begin{tikzpicture}
+  % wrong way round disables scaling
+  \draw[double equal sign distance, nfold, arrows=-Implies, green, opacity=.5] (0,0) -- (1,0);
+  \draw[double equal sign distance, scaling nfold=4, arrows=-Implies, purple, opacity=.5] (0,0) -- (1,0);
+\end{tikzpicture}
+
+\subsection{Singular and almost singular curves}
+
+\subsubsection{Exactly singular}
+\begin{tikzpicture}
+  \draw[double distance=5pt, nfold] (.5,1) -- (1,0) .. controls (1,0) and (1.1, 1) .. (2,1);
+  \draw[red] (.5,1) -- (1,0) .. controls (1,0) and (1,1) .. (2,1);
+  \draw[double distance=5pt, nfold] (4,1) .. controls (3.1,1) and (3,0) .. (3,0) --  (2.5,1);
+\end{tikzpicture}
+
+\subsubsection{Almost singular}
+\begin{tikzpicture}
+  \draw[double distance=5pt, nfold] (.5,1) -- (1,0) .. controls (1,.1) and (1.1,1) .. (2,1);
+  \draw[red] (.5,1) -- (1,0) .. controls (1,0) and (1.1,1) .. (2,1);
+  \draw[double distance=5pt, nfold] (4,1) .. controls (3.1,1) and (3,.1) .. (3,0) --  (2.5,1);
+\end{tikzpicture}\\
+Both the larger discrepancy between the red line and the double path and the slight corner at the join are expected.
+
+\section{Checking for undesired global effects}
 
 \begin{tikzpicture}[line join=miter, miter limit=10, x={(1.1cm,0)}, y={(0,1.1cm)}]
   \path [draw=green,opacity=0.5, line width=5pt, arrows=->] (3,1) arc (0:180:1.5 and 1) -- (0.5,1.0) -- (2.5,1.0) -- (2.9,0.5)  to[relative, out=30, in=150] (3.5,0.2) (0,0) -- (2,0) -- (0,0.25) ;
@@ -175,9 +274,26 @@ The desynchronisation in the latter case is a fundamental limitation of this app
     & a_6 \ar[d, Rightarrow, double distance=10pt, nfold=6]
     & a_7 \ar[d, Rightarrow, double distance=10pt, nfold=7]
     \\
-  b_2 \ar[r, Mapsto, nfold] \ar[r, Mapsto, color=green, opacity=.5] & b_3 \ar[r, Mapsto, double distance=3pt, nfold=3] & b_4 \ar[r, Mapsfrom, nfold=3] & b_5 & b_6 & b_7
+  b_2 \ar[r, Mapsto, color=green, opacity=.5]  \ar[r, Mapsto, nfold, purple, opacity=.5] & b_3 \ar[r, Mapsto, double distance=3pt, nfold=3] & b_4 \ar[r, Mapsfrom, nfold=3] & b_5 & b_6 & b_7
 \end{tikzcd}
 
+\subsection{Scaling test}
+
+\begin{tikzcd}[row sep=1.5cm]
+      a_2 \ar[d, Rightarrow, scaling nfold, "b", "a"']
+      \ar[d, purple, opacity=.5, Rightarrow, "b", "a"']
+    & a_3 \ar[d, Rightarrow, scaling nfold=3, "b", "a"']
+    & a_4 \ar[d, Rightarrow, scaling nfold=4, "b", "a"']
+      \ar[d, purple, opacity=.5, Rightarrow, nfold]
+    & a_5 \ar[d, Rightarrow, scaling nfold=5, "b", "a"']
+    & a_6 \ar[d, Rightarrow, scaling nfold=6, "b", "a"']
+      \ar[d, purple, opacity=.5, Rightarrow, nfold]
+    & a_7 \ar[d, Rightarrow, scaling nfold=7, "b", "a"'] \\
+  b_2 \ar[r, Mapsto, color=green, opacity=.5]  \ar[r, Mapsto, nfold, purple, opacity=.5] & b_3 \ar[r, Mapsto, double distance=3pt, nfold=3] & b_4 \ar[r, Mapsfrom, nfold=3] & b_5 & b_6 & b_7
+\end{tikzcd}
+
+
+\subsection{Testing compatibility with various features}
 
 \newcommand{\testarrow}[2]{
   \def\testoptions##1{[##1]}
@@ -202,6 +318,14 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \testarrow{dr,shift left=-1pt, out=30, in=180,"l", "m"'}{nfold}
   & c_3 \\
   d_1 \testarrow{r, bend right, double distance=5pt, "a","b"'}{nfold=5} & d_2 & d_3
+\end{tikzcd}
+
+\subsection{Squiggly (issue \#4)}
+
+\begin{tikzcd}
+  \bullet & \bullet
+  \arrow[Rightarrow, squiggly, from=1-1, to=1-2, green]
+  \arrow[Rightarrow, squiggly, from=1-1, to=1-2, nfold, purple, opacity=.5]
 \end{tikzcd}
 
 \end{document}

@@ -1,6 +1,9 @@
 ## Generated test pdfs
 test-pgfbezieroffset.pdf
 test-tikznfold.pdf
+test-invariance.pdf
+/testfile.tex
+/testfile.pdf
 
 ## Build folder
 build/*

@@ -1,0 +1,65 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{tikz}
+% We do not import nfold up here because we want to compare the behaviour with and without it.
+% nfold imports arrow.meta by default, so we import it explicitly for comparison
+\usetikzlibrary{arrows.meta}
+
+
+\begin{document}
+
+\section{Checking \textbackslash pgf@up@draw@arrows@only}
+
+Expected behaviour:\\[1ex]
+\begin{pgfpicture}
+  \pgfpathmoveto{\pgfpointorigin}
+  \pgfpathlineto{\pgfpoint{3cm}{0cm}}
+  \pgfsetlinewidth{.3cm}
+  \pgfsetinnerlinewidth{.25cm}
+  \pgfsetarrows{<->}
+  \pgfusepath{tips/proper}
+\end{pgfpicture}
+\begin{pgfpicture}
+  \pgfpathmoveto{\pgfpointorigin}
+  \pgfpathlineto{\pgfpoint{3cm}{0cm}}
+  \pgfsetlinewidth{.3cm}
+  \pgfsetinnerlinewidth{.25cm}
+  \pgfsetarrows{<->}
+  \pgfusepath{tips/true}
+\end{pgfpicture}\\[2ex]
+
+Actual behaviour:\\
+{%
+\usetikzlibrary{nfold}%
+\newcount\arrowsonlycalls
+\arrowsonlycalls=0
+\makeatletter
+  \let\old@arrowsonly\pgf@up@draw@arrows@only
+  \def\pgf@up@draw@arrows@only{%
+    \old@arrowsonly%
+    \global\advance\arrowsonlycalls by1%
+  }
+\begin{pgfpicture}
+  \pgfpathmoveto{\pgfpointorigin}
+  \pgfpathlineto{\pgfpoint{3cm}{0cm}}
+  \pgfsetlinewidth{.3cm}
+  \pgfsetinnerlinewidth{.25cm}
+  \pgfsetarrows{<->}
+  \pgfusepath{tips/proper}
+\end{pgfpicture}
+\begin{pgfpicture}
+  \pgfpathmoveto{\pgfpointorigin}
+  \pgfpathlineto{\pgfpoint{3cm}{0cm}}
+  \pgfsetlinewidth{.3cm}
+  \pgfsetinnerlinewidth{.25cm}
+  \pgfsetarrows{<->}
+  \pgfusepath{tips/true}
+\end{pgfpicture}\\
+\ifnum\arrowsonlycalls=2
+  \verb"\pgf@up@draw@arrows@only" was called twice as expected
+\else
+  \pgferror{Unexpected number of calls (\the\arrowsonlycalls\space instead of 2) to \string\pgf@up@draw@arrows@only.}
+\fi
+}
+
+\end{document}

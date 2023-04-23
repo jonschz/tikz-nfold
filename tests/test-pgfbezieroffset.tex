@@ -7,10 +7,6 @@
 \usepackage{tikz}
 
 \usepgflibrary{bezieroffset}
-%% for syntax highlighting:
-%\makeatletter
-%\input{pgflibrarybezieroffset.code.tex}
-%\makeatother
 
 \makeatletter
 \newcommand{\drawsplit}[5]{
@@ -50,11 +46,11 @@ Second curve:\\
 
 % override \pgfwarning to capture the emitted warnings
 \let\errormsg\pgfutil@empty
-\renewcommand{\pgfwarning}[1]{
+\renewcommand{\pgfutil@packagewarning}[2]{
   \ifx\errormsg\pgfutil@empty
-    \xdef\errormsg{#1}
+    \xdef\errormsg{#2}
   \else
-    \xdef\errormsg{\errormsg; #1}
+    \xdef\errormsg{\errormsg;\\ #2}
   \fi
 }
 
@@ -257,7 +253,7 @@ Second curve:\\
 {\pgfpoint{60pt}{0pt}}
 {\pgfpoint{100pt}{0pt}}
 {No error}
-{No error}
+{No error; one segment}
 {Exactly straight, no degeneracy}
 
 \testcase{\pgfpoint{0pt}{0pt}}
@@ -289,7 +285,7 @@ Second curve:\\
 {\pgfpoint{1.144cm}{-0.84cm}}
 {\pgfpoint{1.802cm}{-0.06cm}}
 {cosine clamped}
-{Recursion limit reached [...]}
+{Recursion limit reached ($\times 2$)}
 {Cusp (errors expected)}
 
 \testcase%
@@ -326,7 +322,7 @@ Second curve:\\
 {\pgfpoint{100pt}{49pt}}
 {\pgfpoint{100pt}{50pt}}
 {cosine clamped}
-{Offsetting a Bezier curve reached the recursion limit ...}
+{Recursion limit reached ($\times 2$)}
 {Almost degenerate $A_3\approx A_4$, errors expected}
 
 \testcase{\pgfpoint{0pt}{0pt}}
@@ -378,7 +374,7 @@ Second curve:\\
 {\pgfpoint{90pt}{16pt}}%
 {\pgfpoint{90pt}{-14pt}}%
 {\pgfpoint{0pt}{0pt}}%
-{first and last point are too close [...]}
+{Visual glitches; first and last point are too close [...]}
 {No error}
 {$A_1=A_4$}
 
@@ -398,7 +394,7 @@ Second curve:\\
 {\pgfpoint{100pt}{-14pt}}%
 {\pgfpoint{0pt}{0pt}}%
 {first and last point are too close [...]}
-{Recursion limit reached [...]}
+{Recursion limit reached ($\times 2$)}
 {Barely grazing the recursion limit}
 
 {
