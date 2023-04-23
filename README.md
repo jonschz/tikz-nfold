@@ -2,14 +2,12 @@
 
 This library adds higher-order paths to [TikZ][pgf] and also fixes some graphical issues with TikZ' `double` paths, used e.g. in wide arrows. It is also compatible with [tikz-cd][tikz-cd], adding support for triple and higher arrows. See the [documentation](tikz-nfold-doc.pdf) for full details.
 
-This package is available on [CTAN](https://ctan.org/pkg/tikz-nfold). Availability on MiKTeX and TeX Live is in the works.
-
 [pgf]: https://ctan.org/pkg/pgf
 [tikz-cd]: https://ctan.org/pkg/tikz-cd
 
 ## Installation
 
-All files except `tikz-nfold-doc.tex` and `tikz-nfold-doc.pdf` should be installed in the `tex` folder.
+This package is available on TeX Live,  MiKTeX and [CTAN](https://ctan.org/pkg/tikz-nfold). If you choose to install this package manually, copy all files except `tikz-nfold-doc.tex` and `tikz-nfold-doc.pdf` into your `tex` folder.
 
 ## License
 
@@ -21,6 +19,8 @@ Any kind of help is welcome! Feel free to test the library, report issues, and o
 
 ## Impressions
 
-![joins](./images/screenshot_join.png)
-
 ![tikz-cd](./images/screenshot_tikzcd.png)
+
+![rainbow](./images/screenshot_rainbow.png)
+
+![joins](./images/screenshot_join.png)
