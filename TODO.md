@@ -11,6 +11,7 @@
 - properly implement `\pgfclosepath`
 - `angle too sharp` detection: Is there a better way to detect if we move a point back too far?
   - May be possible for lines but very hard for curves
+- do curvature checks and throw warnings at the start and end of offset segments
 
 ## Performance
 - remove direct and indirect `\pgfmathparse` calls, mostly in the joins

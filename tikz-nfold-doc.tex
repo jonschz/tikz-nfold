@@ -281,27 +281,27 @@ to only import the base layer library. The following commands are provided:
 \end{itemize}
 
 \subsection{Offsetting paths}
-The following macros offset an entire soft path. These are part of the TikZ library \nfold.
+The following macros are part of the TikZ library \nfold{} and offset an entire soft path.
 \begin{itemize}
   \item \verb|\pgfoffsetpath{softpath}{length}|: This macro offsets \texttt{softpath} by \texttt{length}. The latter may be negative.
-  \item \verb|\pgfoffsetpathfraction{softpath}{hwidth}{fraction}|: This macro offsets the \texttt{softpath} by \texttt{fraction*hwidth}. Note that the output is \emph{not} equal to the previous macro with \texttt{length=fraction*hwidth} because the joins are treated differently -- see the examples below. Further note that \texttt{length=0} does \emph{not} reproduce the input path.
+  \item \verb|\pgfoffsetpathfraction{softpath}{hwidth}{fraction}|: This macro offsets the \texttt{softpath} by \texttt{fraction*hwidth}. Note that the output is \emph{not} equal to the previous macro with \texttt{length=fraction*hwidth} because the joins are treated differently -- see the examples below. Further note that \texttt{hwidth} must not be negative, and that \texttt{fraction=0} does \emph{not} reproduce the input path.
   \item \verb|\pgfoffsetpathqfraction|: This macro is a quicker version of the previous macro  does not parse the input values using the \texttt{pgfmath}-engine.
-  \item \verb|\pgfoffsetpathindex{softpath}{width}{i}{n}|: In this convenience method, \texttt{i} and \texttt{n} are integers with $1 \leq i \leq n$. This corresponds to \texttt{fraction=-1} for \texttt{i=1} and \texttt{fraction=1} for \texttt{i=n}, and is capable of reproducing the output of \nfold{} (albeit less efficient).
+  \item \verb|\pgfoffsetpathindex{softpath}{width}{i}{n}|: In this convenience method, \texttt{i} and \texttt{n} are integers with $1 \leq i \leq n$. It calls the previous macro with \texttt{fraction=-1} for \texttt{i=1} and with \texttt{fraction=1} for \texttt{i=n} (with all other values interpolated), and is capable of reproducing the output of \nfold{} (albeit in a less efficient way).
 \end{itemize}
-In the following example we see how \verb|\pgfoffsetpath{..}{0pt}| reproduces the input path (rendered in black) and how \verb|\pgfoffsetpathfraction{..}{8pt}{0}| differs from the former.
+In the following example we see how \verb|\pgfoffsetpath{..}{0pt}| reproduces the input path (rendered in black) and how \verb|\pgfoffsetpathfraction{..}{8pt}{0}| differs.
 \begin{tkzexample}[latex=4cm]
 \begin{tikzpicture}[line join=bevel]
   \path[save path=\savedpath] (0,0) -- (1,0)
     to[out=0, in=-80] (1,3) -- (3,2);
   \draw[color=lightgray,line width=16pt,use path=\savedpath];
-  \pgfoffsetpath{\savedpath}{0pt}
-  \color{black} \pgfusepathqstroke
+  \pgfoffsetpathfraction{\savedpath}{8pt}{0}
+  \pgfsetlinewidth{1pt} \color{red} \pgfusepathqstroke
   \pgfoffsetpath{\savedpath}{8pt}
   \color{blue} \pgfusepathqstroke
   \pgfoffsetpath{\savedpath}{-8pt}
   \color{green} \pgfusepathqstroke
-  \pgfoffsetpathfraction{\savedpath}{8pt}{0}
-  \pgfsetstrokeopacity{.7} \color{red} \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{0pt}
+  \pgfsetlinewidth{.4pt} \color{black} \pgfusepathqstroke
 \end{tikzpicture}
 \end{tkzexample}
 Here we see how the commands can be used to customise $n$-fold paths:
