@@ -1,0 +1,40 @@
+% Compile using pdftex test-plaintex.tex
+
+\input tikz.tex
+\usetikzlibrary{cd}
+\usetikzlibrary{nfold}
+\usetikzlibrary{intersections}
+
+\baselineskip=12pt
+\hsize=6.3truein
+\vsize=8.7truein
+
+
+\tikzpicture[line join=miter, miter limit=10, x={(1.1cm,0)}, y={(0,1.1cm)}]
+  \path [draw=green,opacity=0.5, line width=5pt, arrows=->] (3,1) arc (0:180:1.5 and 1) -- (0.5,1.0) -- (2.5,1.0) -- (2.9,0.5)  to[relative, out=30, in=150] (3.5,0.2) (0,0) -- (2,0) -- (0,0.25) ;
+  \path[draw=purple, opacity=0.5, arrows=-Implies, double distance=4.2pt, nfold=5]
+    (3,1) arc (0:180:1.5 and 1) node[blue, midway, above] {node colour correct} -- (0.5,1.0) -- (2.5,1.0) -- (2.9,0.5) to[relative, out=30, in=150] (3.5,0.2)
+  (0,0) -- (2,0) -- (0,0.25);
+  \draw[line width=5pt, opacity=.5] (0,-1)  -- (1, -1);
+    \path[draw=green,opacity=0.5, line width=5pt, arrows=->]
+    (3 cm,-2 cm) arc (0:180:1.5 cm and 1 cm) -- (0.5 cm,-2 cm);
+    \path
+    [draw=purple,opacity=0.5, arrows=-Implies, double distance=4.2pt, nfold=5]
+    (3 cm,-2 cm) arc (0:180:1.5 cm and 1 cm) -- (0.5 cm,-2 cm);
+\endtikzpicture
+
+
+\tikzcd[row sep=1.5cm]
+      a_2 \ar[d, Rightarrow, scaling nfold, "b", "a"']
+      \ar[d, purple, opacity=.5, Rightarrow, "b", "a"']
+    & a_3 \ar[d, Rightarrow, scaling nfold=3, "b", "a"']
+    & a_4 \ar[d, Rightarrow, scaling nfold=4, "b", "a"']
+      \ar[d, purple, opacity=.5, Rightarrow, nfold]
+    & a_5 \ar[d, Rightarrow, scaling nfold=5, "b", "a"']
+    & a_6 \ar[d, Rightarrow, scaling nfold=6, "b", "a"']
+      \ar[d, purple, opacity=.5, Rightarrow, nfold]
+    & a_7 \ar[d, Rightarrow, scaling nfold=7, "b", "a"'] \\
+  b_2 \ar[r, Mapsto, color=green, opacity=.5]  \ar[r, Mapsto, nfold, purple, opacity=.5] & b_3 \ar[r, Mapsto, double distance=3pt, nfold=3] & b_4 \ar[r, Mapsfrom, nfold=3] & b_5 & b_6 & b_7
+\endtikzcd
+
+\bye

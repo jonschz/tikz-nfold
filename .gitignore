@@ -1,9 +1,9 @@
 ## Generated test pdfs
-test-pgfbezieroffset.pdf
-test-tikznfold.pdf
-test-invariance.pdf
+*.pdf
+!tikz-nfold-doc.pdf
+
+## Private test file
 /testfile.tex
-/testfile.pdf
 
 ## Build folder
 build/*
@@ -24,6 +24,7 @@ build/tikz-nfold/*
 *.cb
 *.cb2
 .*.lb
+*.pgf
 
 ## Intermediate documents:
 *.dvi

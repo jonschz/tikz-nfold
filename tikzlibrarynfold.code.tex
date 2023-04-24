@@ -232,6 +232,8 @@
 \newif\ifpgf@nfold@closejoinsedgecase
 % This stores whether we are in an error case where we need to avoid dividing by zero
 \newif\ifpgf@nfold@angletoosharp
+% This stores whether we need the intersections library for an arrow tip but it is not loaded
+\newif\ifpgf@nfold@intersectionsnotloaded
 
 
 \def\pgf@nfold@handlesegment{%
@@ -401,7 +403,7 @@
     % Idea: when parsing the path, add a detection if there is a closepath at the current segment,
     % then cache the data of the last segment.
     % We could then insert a "fake previous segment" into the path at the right place
-    \pgfutil@packagewarning{tikz-nfold}{The option 'cycle' is not yet properly supported}
+    \pgfutil@packagewarning{tikz-nfold}{The option `cycle' is not yet properly supported}
     \pgfpathclose
   \fi
   \ifx\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentcurveto
@@ -440,90 +442,96 @@
 % the intersections library. To speed up compilation times, the intersection points are precomputed
 % up to n = 5. If your document contains arrows of order 6 or larger, consider adding those
 % as well; the values are output in the log file.
-\expandafter\def\csname tikz@arrow@intersec@cache@2@3\endcsname{\pgfqpoint{2pt}{0pt}}
-\expandafter\def\csname tikz@arrow@intersec@cache@2@4\endcsname{\pgfqpoint{0.94063pt}{-0.33333pt}}
-\expandafter\def\csname tikz@arrow@intersec@cache@3@4\endcsname{\pgfqpoint{0.94063pt}{0.33333pt}}
-\expandafter\def\csname tikz@arrow@intersec@cache@2@5\endcsname{\pgfqpoint{0.64167pt}{-0.5pt}}
-\expandafter\def\csname tikz@arrow@intersec@cache@3@5\endcsname{\pgfqpoint{2pt}{0pt}}
-\expandafter\def\csname tikz@arrow@intersec@cache@4@5\endcsname{\pgfqpoint{0.64167pt}{0.5pt}}
+\expandafter\def\csname pgf@nfold@intersec@cache@2@3\endcsname{\pgfqpoint{2pt}{0pt}}
+\expandafter\def\csname pgf@nfold@intersec@cache@2@4\endcsname{\pgfqpoint{0.94063pt}{-0.33333pt}}
+\expandafter\def\csname pgf@nfold@intersec@cache@3@4\endcsname{\pgfqpoint{0.94063pt}{0.33333pt}}
+\expandafter\def\csname pgf@nfold@intersec@cache@2@5\endcsname{\pgfqpoint{0.64167pt}{-0.5pt}}
+\expandafter\def\csname pgf@nfold@intersec@cache@3@5\endcsname{\pgfqpoint{2pt}{0pt}}
+\expandafter\def\csname pgf@nfold@intersec@cache@4@5\endcsname{\pgfqpoint{0.64167pt}{0.5pt}}
 % intersections are precomputed up to this order
-\def\tikz@arrow@intersec@numcached{5}
+\def\pgf@nfold@intersec@numcached{5}
 
 % This macro extends the arrow body to the tips
 % parameter: s=start, e=end
 \def\pgf@nfold@extendtotip#1{
-  % Do not extend the arrow for index=1 and index=order, it already ends in the right place
-  \ifnum\pgf@nfold@index>1\relax\ifnum\pgf@nfold@index<\pgf@nfold@order\relax%
-    % Step 1: Find the intersection of the arrow's path with the head
-    \ifcsname tikz@arrow@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname
-      \pgfextract@process\pgf@nfold@arrowintersect
-        {\csname tikz@arrow@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname}%
-    \else
-      % the intersection has not been precomputed, thus compute on the fly here
-      \pgfintersectionofpaths{
-        % specify the tip
-        \pgfpathmoveto{\pgfqpoint{-1.4pt}{2.65pt}}
-        \pgfpathcurveto{\pgfqpoint{-0.75pt}{1.25pt}}{\pgfqpoint{1pt}{0.05pt}}{\pgfqpoint{2pt}{0pt}}
-        \pgfpathcurveto{\pgfqpoint{1pt}{-0.05pt}}{\pgfqpoint{-0.75pt}{-1.25pt}}{\pgfqpoint{-1.4pt}{-2.65pt}}
-      }{
-        % extend the body to intersect the tip
-        \pgfpathmoveto{\pgfqpoint{-3pt}{\pgf@nfold@shift@fraction pt}}
-        \pgfpathlineto{\pgfqpoint{3pt}{\pgf@nfold@shift@fraction pt}}
-      }
-      \ifnum\pgfintersectionsolutions>0
-        \pgfextract@process\pgf@nfold@arrowintersect{\pgfpointintersectionsolution{1}}%
-        \typeout{tikz-nfold: computed intersection cache@\the\pgf@nfold@index @\the\pgf@nfold@order: \string\pgfqpoint{\the\pgf@x}{\the\pgf@y}^^J}
-        % add the new intersection to the cache
-        \expandafter\xdef\csname tikz@arrow@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname{\noexpand\pgfqpoint{\the\pgf@x}{\the\pgf@y}}
-      \else
-        % this is a failsafe and should never be reached
-        \pgfutil@packagewarning{tikz-nfold}{did not find intersection}
-        \pgfextract@process\pgf@nfold@arrowintersect{\pgfqpoint{0pt}{\pgf@nfold@shift@fraction pt}}%
-      \fi
-    \fi% if precomputed
-  % Step 2: Extend the arrow body to the intersection point.
-  % If the tip is at the beginning of the path, we have to move to the intersection
-  % and then draw a line to the "regular" starting point. The subsequent segment then
-  % should omit its moveto.
-  % If the tip is at the end, we are already in the right position and only need to extend
-  % the current path to the intersection point.
-  \begingroup
-    \pgftransformreset
-    \if#1s
-      \pgftransformshift{\pgf@nfold@segment@start}
-      \pgftransformrotate{\pgf@nfold@next@startangle}
-      \pgftransformxscale{-1}
-    \else
-      \pgftransformshift{\pgf@nfold@segment@end}
-      \pgftransformrotate{\pgf@nfold@cur@endangle}
-    \fi
-    % we don't want to undo the shift by .42\pgflinewidth after the scaling
-    \pgfutil@tempdima=\pgf@nfold@hwidth
-    \pgfutil@tempdima=\pgf@nfold@shift@fraction\pgfutil@tempdima
-    \pgfextract@process\pgf@nfold@startofextension
-      {\pgfpointtransformed{\pgfqpoint{0pt}{\pgfutil@tempdima}}}
-    % 0.5 - 0.06 = 0.42
-    \pgftransformshift{\pgfqpoint{.42\pgflinewidth}{0pt}}
-    \pgftransformscale{\pgf@nfold@hwidth}
-    \pgfextract@process\pgf@nfold@arrowintersect{\pgfpointtransformed{\pgf@nfold@arrowintersect}}
-    \global\let\pgf@nfold@startofextension\pgf@nfold@startofextension
-    \global\let\pgf@nfold@arrowintersect\pgf@nfold@arrowintersect
-  \endgroup
-  \if#1s
-    \pgfpathmoveto{\pgf@nfold@arrowintersect}
-    % This is precisely the start of the body, shifted vertically
-    \pgfpathlineto{\pgf@nfold@startofextension}
-    % hack: We make the next segment believe that this segment was a lineto
-    % so the path does not get interrupted
-    \let\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlineto
-    \let\pgf@nfold@cur@endangle\pgf@nfold@next@startangle
-  \else\if#1e
-    \pgfpathlineto{\pgf@nfold@arrowintersect}
+  \ifpgf@nfold@intersectionsnotloaded
+    \pgfutil@packageerror{tikz-nfold}{%
+        If `nfold' is larger than \pgf@nfold@intersec@numcached\space and you use
+        an `Implies' arrow tip you need to say \string\usetikzlibrary{intersections}}{}
   \else
-    \pgfutil@packageerror{tikz-nfold}{Invalid argument to \string\pgf@nfold@extendtotip: \meaning#1}{}
-  \fi\fi
-  \pgftransformreset
-\fi\fi% if 1 < i < nArrows
+    % Do not extend the arrow for index=1 and index=order, it already ends in the right place
+    \ifnum\pgf@nfold@index>1\relax\ifnum\pgf@nfold@index<\pgf@nfold@order\relax%
+      % Step 1: Find the intersection of the arrow's path with the head
+      \ifcsname pgf@nfold@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname
+        \pgfextract@process\pgf@nfold@arrowintersect
+          {\csname pgf@nfold@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname}%
+      \else
+        % the intersection has not been precomputed, thus compute on the fly here
+        \pgfintersectionofpaths{
+          % specify the tip
+          \pgfpathmoveto{\pgfqpoint{-1.4pt}{2.65pt}}
+          \pgfpathcurveto{\pgfqpoint{-0.75pt}{1.25pt}}{\pgfqpoint{1pt}{0.05pt}}{\pgfqpoint{2pt}{0pt}}
+          \pgfpathcurveto{\pgfqpoint{1pt}{-0.05pt}}{\pgfqpoint{-0.75pt}{-1.25pt}}{\pgfqpoint{-1.4pt}{-2.65pt}}
+        }{
+          % extend the body to intersect the tip
+          \pgfpathmoveto{\pgfqpoint{-3pt}{\pgf@nfold@shift@fraction pt}}
+          \pgfpathlineto{\pgfqpoint{3pt}{\pgf@nfold@shift@fraction pt}}
+        }
+        \ifnum\pgfintersectionsolutions>0
+          \pgfextract@process\pgf@nfold@arrowintersect{\pgfpointintersectionsolution{1}}%
+          \immediate\write17{tikz-nfold: computed intersection cache@\the\pgf@nfold@index @\the\pgf@nfold@order: \string\pgfqpoint{\the\pgf@x}{\the\pgf@y}^^J}
+          % add the new intersection to the cache
+          \expandafter\xdef\csname pgf@nfold@intersec@cache@\the\pgf@nfold@index @\the\pgf@nfold@order\endcsname{\noexpand\pgfqpoint{\the\pgf@x}{\the\pgf@y}}
+        \else
+          % this is a failsafe and should never be reached
+          \pgfutil@packagewarning{tikz-nfold}{did not find intersection}
+          \pgfextract@process\pgf@nfold@arrowintersect{\pgfqpoint{0pt}{\pgf@nfold@shift@fraction pt}}%
+        \fi
+      \fi% if precomputed
+    % Step 2: Extend the arrow body to the intersection point.
+    % If the tip is at the beginning of the path, we have to move to the intersection
+    % and then draw a line to the "regular" starting point. The subsequent segment then
+    % should omit its moveto.
+    % If the tip is at the end, we are already in the right position and only need to extend
+    % the current path to the intersection point.
+    \begingroup
+      \pgftransformreset
+      \if#1s
+        \pgftransformshift{\pgf@nfold@segment@start}
+        \pgftransformrotate{\pgf@nfold@next@startangle}
+        \pgftransformxscale{-1}
+      \else
+        \pgftransformshift{\pgf@nfold@segment@end}
+        \pgftransformrotate{\pgf@nfold@cur@endangle}
+      \fi
+      % we don't want to undo the shift by .42\pgflinewidth after the scaling
+      \pgfutil@tempdima=\pgf@nfold@hwidth
+      \pgfutil@tempdima=\pgf@nfold@shift@fraction\pgfutil@tempdima
+      \pgfextract@process\pgf@nfold@startofextension
+        {\pgfpointtransformed{\pgfqpoint{0pt}{\pgfutil@tempdima}}}
+      % 0.5 - 0.06 = 0.42
+      \pgftransformshift{\pgfqpoint{.42\pgflinewidth}{0pt}}
+      \pgftransformscale{\pgf@nfold@hwidth}
+      \pgfextract@process\pgf@nfold@arrowintersect{\pgfpointtransformed{\pgf@nfold@arrowintersect}}
+      \global\let\pgf@nfold@startofextension\pgf@nfold@startofextension
+      \global\let\pgf@nfold@arrowintersect\pgf@nfold@arrowintersect
+    \endgroup
+    \if#1s
+      \pgfpathmoveto{\pgf@nfold@arrowintersect}
+      % This is precisely the start of the body, shifted vertically
+      \pgfpathlineto{\pgf@nfold@startofextension}
+      % hack: We make the next segment believe that this segment was a lineto
+      % so the path does not get interrupted
+      \let\pgf@nfold@currentinputsegment\pgf@nfold@inputsegmentlineto
+      \let\pgf@nfold@cur@endangle\pgf@nfold@next@startangle
+    \else\if#1e
+      \pgfpathlineto{\pgf@nfold@arrowintersect}
+    \else
+      \pgfutil@packageerror{tikz-nfold}{Invalid argument to \string\pgf@nfold@extendtotip: \meaning#1}{}
+    \fi\fi
+    \pgftransformreset
+    \fi\fi% if 1 < i < nArrows
+  \fi% if intersections is needed and not loaded
 }
 
 % Parsing the arrow tips
@@ -1056,6 +1064,13 @@
     \ifnum\pgf@nfold@order<1\relax%
       \pgfutil@packageerror{tikz-nfold}{The key /pgf/nfold must take a value of at least 1, got \the\pgf@nfold@order}{}%
     \fi%
+    % If nfold > numcached AND intersections is not loaded AND we draw an Implies tip, we get an error.
+    % We check the first two conditions now and set the respective flag
+    \ifnum\pgf@nfold@order>\pgf@nfold@intersec@numcached\relax
+      \ifdefined\pgfintersectionofpaths\else
+        \pgf@nfold@intersectionsnotloadedtrue
+      \fi
+    \fi
   },
   /pgf/nfold/.default=2
 }
