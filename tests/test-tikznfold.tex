@@ -118,7 +118,7 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
   \begin{tikzpicture}
     \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0.01);
   \end{tikzpicture}\\
-  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
+  Expectation: Finite-sized output, pgf warning ``angle too sharp''\\[.5em]
   Actual warning: \errormsg
 
   \subsubsection{Exactly 180 degree turn}
@@ -126,7 +126,7 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
   \begin{tikzpicture}
     \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0);
   \end{tikzpicture}\\
-  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
+  Expectation: Finite-sized output, pgf warning ``angle too sharp''\\[.5em]
   Actual warning: \errormsg
 }
 
@@ -184,7 +184,6 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
 \end{tikzpicture}
 
 \subsection{Degenerate paths and tips}
-The second example has some slightly incorrect behaviour, but I don't expect many cases where this would be relevant.
 \begin{tikzpicture}
   \draw[draw=green,opacity=.5,double distance=3pt, arrows=|-|] (0,0) (.25,0) -- (.75,0) (1,0);
   \draw[draw=purple, opacity=.5,double distance=3pt, arrows=|-|, nfold=4] (0,0) (.25,0) -- (.75,0) (1,0);

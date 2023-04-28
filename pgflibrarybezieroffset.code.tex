@@ -173,6 +173,11 @@
   % normalise tangents and normals; this avoids overflow issues later, and we need
   % the normal vector to be of length 1 anyway
   \pgf@offset@compute@tangents{#1}{#2}{#3}{#4}%
+  \pgf@offset@bezier@segment@{#1}{#2}{#3}{#4}{#5}%
+}
+
+% this version assumes that the tangents have been precomputed in \pgf@tmp@tang@i and @ii
+\def\pgf@offset@bezier@segment@#1#2#3#4#5{%
   % offset A1
   % compute the normal
   \pgf@tmp@tang@i
@@ -272,13 +277,6 @@
 % #1-#4: control points of the whole Bezier curve
 % #5: offset
 
-% \def\pgfoffsetcurve#1#2#3#4#5{%
-%   \pgf@subdivideandoffsetcurve{#1}{#2}{#3}{#4}{#5}{\pgf@offset@max@recursion}{0}{\pgf@nfold@callback@move}%
-% }
-% \def\pgfoffsetcurvenomove#1#2#3#4#5{%
-%   \pgf@subdivideandoffsetcurve{#1}{#2}{#3}{#4}{#5}{\pgf@offset@max@recursion}{0}{\pgf@nfold@callback@nomove}%
-% }
-
 \def\pgfoffsetcurve#1#2#3#4#5{%
   \pgfoffsetcurvecallback{#1}{#2}{#3}{#4}{#5}{\pgf@nfold@callback@move}%
 }
@@ -291,32 +289,37 @@
 % #5: =0 if this is the first segment of the curve, =1 otherwise
 %   (checking for #5=0 allows us to draw the curve without interruptions)
 \def\pgf@nfold@callback@move#1#2#3#4#5{%
-  \ifnum#5=0\relax\pgfpathmoveto{#1}\fi%
+  \if#50\pgfpathmoveto{#1}\fi%
   \pgfpathcurveto{#2}{#3}{#4}%
 }
 % this version never does a moveto at the start. Useful for drawing a path consisting of
 % multiple Bezier curves.
 \def\pgf@nfold@callback@nomove#1#2#3#4#5{\pgfpathcurveto{#2}{#3}{#4}}
 
-% Like the previous macro, but with a custom callback macro for each segment instead of
-% executing \drawsegment as defined above. See \drawsegment for the arguments.
+% This macro subdivides and offsets a curve and executes a given callback on every offset simple segment.
+% #1-#4: control points of the segment
+% #5: =0 if this is the first segment of the curve, =1 otherwise
+% #6: callback (see \pgf@nfold@callback@move) for the parameters
 \def\pgfoffsetcurvecallback#1#2#3#4#5#6{%
-  \pgf@subdivideandoffsetcurve{#1}{#2}{#3}{#4}{#5}{\pgf@offset@max@recursion}{0}{#6}%
+  \edef\pgf@offset@tmp@callback##1##2##3##4##5{%
+    \noexpand\pgf@offset@bezier@segment{##1}{##2}{##3}{##4}{#5}%
+    \noexpand#6{\noexpand\pgf@bezier@offset@i}{\noexpand\pgf@bezier@offset@ii}{\noexpand\pgf@bezier@offset@iii}{\noexpand\pgf@bezier@offset@iv}{##5}%
+  }
+  \pgf@subdividecurve{#1}{#2}{#3}{#4}{\pgf@offset@max@recursion}{0}{\pgf@offset@tmp@callback}%
 }
 
 
-% 6 parameters:
+% This macro subdivides (but does not offset) a curve and executes a callback on every simple segment.
 % #1-#4: control points
-% #5: offset
-% #6: recursion limit (decreases on every recursive call)
-% #7: =0 if this is the start of the curve, =1 otherwise;
-% #8: callback for output (see above)
+% #5: recursion limit (decreases on every recursive call)
+% #6: =0 if this is the start of the curve, =1 otherwise;
+% #7: callback for output (see above)
 \newif\ifpgf@offset@subdivide
-\def\pgf@subdivideandoffsetcurve#1#2#3#4#5#6#7#8{%
+\def\pgf@subdividecurve#1#2#3#4#5#6#7{%
   % we need a group to avoid overwriting variables in recursive calls
   \begingroup%
     \pgf@offset@subdividefalse%
-    \c@pgf@counta=#6\relax
+    \c@pgf@counta=#5\relax
     \advance\c@pgf@counta by -1
     \pgfextract@process\pgf@ctrl@i{#1}%
     \pgfextract@process\pgf@ctrl@ii{#2}%
@@ -365,19 +368,17 @@
           Consider increasing \string\pgf@offset@max@recursion}%
         % Try to offset the curve anyway. The result will not be precise,
         % but the code is sufficiently robust to not crash
-        \pgf@offset@bezier@segment{\pgf@ctrl@i}{\pgf@ctrl@ii}{\pgf@ctrl@iii}{\pgf@ctrl@iv}{#5}%
-        #8{\pgf@bezier@offset@i}{\pgf@bezier@offset@ii}{\pgf@bezier@offset@iii}{\pgf@bezier@offset@iv}{#7}%
+        #7{\pgf@ctrl@i}{\pgf@ctrl@ii}{\pgf@ctrl@iii}{\pgf@ctrl@iv}{#6}%
       \else
         % split the non-simple segment and execute recursive calls
         \pgf@splitbezier{.5}{\pgf@ctrl@i}{\pgf@ctrl@ii}{\pgf@ctrl@iii}{\pgf@ctrl@iv}%
         % pass on the "start of the curve flag" only to the first term
-        \pgf@subdivideandoffsetcurve{\pgf@splitbezier@i@i}{\pgf@splitbezier@i@ii}{\pgf@splitbezier@i@iii}{\pgf@splitbezier@i@iv}{#5}{\c@pgf@counta}{#7}{#8}%
-        \pgf@subdivideandoffsetcurve{\pgf@splitbezier@ii@i}{\pgf@splitbezier@ii@ii}{\pgf@splitbezier@ii@iii}{\pgf@splitbezier@ii@iv}{#5}{\c@pgf@counta}{1}{#8}%
+        \pgf@subdividecurve{\pgf@splitbezier@i@i}{\pgf@splitbezier@i@ii}{\pgf@splitbezier@i@iii}{\pgf@splitbezier@i@iv}{\c@pgf@counta}{#6}{#7}%
+        \pgf@subdividecurve{\pgf@splitbezier@ii@i}{\pgf@splitbezier@ii@ii}{\pgf@splitbezier@ii@iii}{\pgf@splitbezier@ii@iv}{\c@pgf@counta}{1}{#7}%
       \fi%
     \else%
       % curve is simple
-      \pgf@offset@bezier@segment{\pgf@ctrl@i}{\pgf@ctrl@ii}{\pgf@ctrl@iii}{\pgf@ctrl@iv}{#5}%
-      #8{\pgf@bezier@offset@i}{\pgf@bezier@offset@ii}{\pgf@bezier@offset@iii}{\pgf@bezier@offset@iv}{#7}%
+      #7{\pgf@ctrl@i}{\pgf@ctrl@ii}{\pgf@ctrl@iii}{\pgf@ctrl@iv}{#6}%
     \fi%
   \endgroup%
 }
