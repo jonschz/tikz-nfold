@@ -10,7 +10,8 @@
 
 \makeatletter
 \newcommand{\drawsplit}[5]{
-\pgf@splitbezier{#1}{#2}{#3}{#4}{#5}
+%\pgf@splitbezier{#1}{#2}{#3}{#4}{#5}
+\pgf@halfsplitbezier{#2}{#3}{#4}{#5}
 \begin{pgfpicture}
   \pgfpathmoveto{#2}
   \pgfpathcurveto{#3}{#4}{#5}
