@@ -943,12 +943,12 @@
 \def\pgf@nfold@token@lineto#1#2#3{%
 %  \pgfpathmoveto{#1}%
 %  \pgfpathlineto{#2}%
-  \pgfoffsetline{#1}{#2}{\pgf@nfold@shiftamount}%
+  \pgfoffsetline@{#1}{#2}{\pgf@nfold@shiftamount}{#3}%
 }
 
 \def\pgf@nfold@token@lineto@continue#1#2#3{%
 %  \pgfoffsetline{#1}{#2}{\pgf@nfold@shiftamount}%
-  \pgfoffsetlinenomove{#1}{#2}{\pgf@nfold@shiftamount}%
+  \pgfoffsetlinenomove@{#1}{#2}{\pgf@nfold@shiftamount}{#3}%
 }
 
 % #5, #6: normalised tangents at start and end (for efficiency)
@@ -1064,7 +1064,8 @@
 \def\pgf@nfold@loop@inner{%
   \pgfmathsetmacro{\pgf@nfold@shift@fraction}%
     {-1+2*(\pgf@nfold@index-1)/(\pgf@nfold@order-1)}
-  \pgfmathsetlengthmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@nfold@shift@fraction}
+  % Do not store shiftamount as a length (i.e. with pt) because we want to use it in \pgfqpointscale{}{}
+  \pgfmathsetmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@nfold@shift@fraction}
   % Transformations are already baked into the path; without this call, they would be applied twice
   \pgftransformreset%
   \pgf@nfold@parsedpath%
@@ -1149,7 +1150,7 @@
     \edef\pgf@nfold@hwidth{\the\pgf@x}
     \edef\pgf@nfold@shift@fraction{#3}
     \pgf@x=\pgf@nfold@shift@fraction\pgf@x\relax
-    \edef\pgf@nfold@shiftamount{\the\pgf@x}
+    \edef\pgf@nfold@shiftamount{\pgf@sys@tonumber\pgf@x}
     \pgfprocessround{#1}{\cachedpath}% remove tokens from the soft path
     \pgf@nfold@parsesoftpath{\cachedpath}{\parsedsoftpath}
 %    \pgfwarning{new path: \meaning\pgf@nfold@parsedpath}

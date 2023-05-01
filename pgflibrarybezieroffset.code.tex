@@ -459,14 +459,25 @@
 % similar to the macros for curves.
 %
 \def\pgfoffsetline#1#2#3{%
-  \pgfpointscale{#3}{\pgfpointnormalised{\pgfpointdiff{#1}{#2}}}%
+  \pgfmathparse{#3}%
+  \pgfoffsetline@{#1}{#2}{\pgfmathresult}{\pgfpointnormalised{\pgfpointdiff{#1}{#2}}}%
+}
+
+% a quicker version in case we already know the tangent and #3 is a number without unit
+\def\pgfoffsetline@#1#2#3#4{%
+  \pgfqpointscale{#3}{#4}%
   \pgf@xc=-\pgf@y
   \pgf@yc=\pgf@x
   \pgfpathmoveto{\pgfpointadd{#1}{\pgfqpoint{\pgf@xc}{\pgf@yc}}}%
   \pgfpathlineto{\pgfpointadd{#2}{\pgfqpoint{\pgf@xc}{\pgf@yc}}}%
 }
+
 \def\pgfoffsetlinenomove#1#2#3{%
-  \pgfpointscale{#3}{\pgfpointnormalised{\pgfpointdiff{#1}{#2}}}%
+  \pgfoffsetlinenomove@{#1}{#2}{#3}{\pgfpointnormalised{\pgfpointdiff{#1}{#2}}}%
+}
+
+\def\pgfoffsetlinenomove@#1#2#3#4{%
+  \pgfqpointscale{#3}{#4}%
   \pgf@xc=-\pgf@y
   \pgf@yc=\pgf@x
   \pgfpathlineto{\pgfpointadd{#2}{\pgfqpoint{\pgf@xc}{\pgf@yc}}}%
