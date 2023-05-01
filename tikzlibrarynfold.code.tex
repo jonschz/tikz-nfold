@@ -19,37 +19,35 @@
 \usetikzlibrary{arrows.meta}
 \usepgflibrary{bezieroffset}
 
+
 % Notes / TODO
 % ------------
-%
 % - minor deviation in squiggly example
 %
 %
 % Future
 % ------
-%
 % - closepath implementation:
 % - closepath test cases:
 %   - close joins edge case at the start/end/both
+% - possible optimisations
+%   - the A1A4 length is computed for every offset; this is something we could cache from the subdivision phase
+%   - faster, less precise veclen@ -> this is used a lot
+%     - if x > y, compute x*(1+(y/x)^2)^(1/2) approx x*(A+B*(y/x)^2); optimize A=1. and B=.5 around the unit circle
+%     - could copy a lot of the existing veclen code; maybe skip the "scaling for precision" steps?
 
-% TODO make a short comment documentation out of this
-% Sketch what I want to achieve:
-% - one macro that describes the entire path
-% - we can set a global fraction variable to affect how the macro offsets the path when called
-% - this macro can contain the following types of calls:
-%   - moveto's, lineto's, curveto's, closepath's, rect's
-%   - these should already be shortened for the joins
-%   - miterjoin, roundjoin, beveljoin
-%     - question: should the join type be set on the fly? Probably no (changed my mind)
-%       - better efficiency if we compute as little as possible in the join itself
+
 %
-% What information do we need?
-% - lines, curves: control points + tangents (or normals?) for efficiency; angles?
-%   - for curves: 6 points/vectors; cannot do 12 parameters
-%   - instead: either set in the same macro or use \pgfqpoint / \pgf@x=...
-% - joins: start angle, end angle, first point; could consider tangents for efficiency
-
-
+% General idea
+% ============
+%
+% In order to offset a path, we must first analyse and slightly modify it. For example,
+% the start and end points of segments need to be relocated slightly in order to make room
+% for the joins, and most curves must be subdivided for the offsetting algorithm. To avoid
+% redundant computations in n-fold paths, we pre-compute as much data as possible and store
+% all this information in a "parsed path" macro. The structure of the parsed path resembles
+% the structure of a pgf soft path, but it consists of different tokens.
+%
 
 
 %
@@ -750,7 +748,7 @@
       % Hack the rendering pipeline: There is a \pgfsyssoftpath@invokecurrentpath call following
       % which we do not want if nfold is active. We therefore clear the current path here
       % and then perform the nfold drawing in our modification of \pgf@stroke@inner@line
-      \pgfsyssoftpath@getcurrentpath\cachedpath%
+      \pgfsyssoftpath@getcurrentpath\pgf@nfold@cachedpath%
       \pgfsyssoftpath@setcurrentpath\pgfutil@empty%
     \else
       \pgfutil@packageerror{tikz-nfold}{Must set \string\pgfinnerlinewidth\space to use nfold, e.g. by setting /tikz/double distance}{}
@@ -801,6 +799,7 @@
   \let\pgf@nfold@parsedpath\pgfutil@empty% NEW
   \pgf@nfold@parse@setupfirst%
   \expandafter\pgf@nfold@@parsesoftpath#1\pgf@stop%
+  \let#2\pgf@nfold@parsedpath%
 }%
 
 \def\pgf@nfold@@parsesoftpath#1{%
@@ -1063,12 +1062,12 @@
 
 \def\pgf@nfold@loop@inner{%
   \pgfmathsetmacro{\pgf@nfold@shift@fraction}%
-    {-1+2*(\pgf@nfold@index-1)/(\pgf@nfold@order-1)}
+    {-1+2*(\pgf@nfold@index-1)/(\pgf@nfold@order-1)}%
   % Do not store shiftamount as a length (i.e. with pt) because we want to use it in \pgfqpointscale{}{}
   \pgfmathsetmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@nfold@shift@fraction}
   % Transformations are already baked into the path; without this call, they would be applied twice
   \pgftransformreset%
-  \pgf@nfold@parsedpath%
+  \parsedpath%
   \pgfsyssoftpath@flushcurrentpath%
   \pgf@up@action%
 }
@@ -1091,9 +1090,9 @@
     \pgf@nfold@compute@widths@from@double%
     \pgfsetlinewidth\pgf@x%
     \edef\pgf@nfold@hwidth{\the\pgf@y}%
-    \pgfprocessround{\cachedpath}{\cachedpath}% remove tokens from the soft path
+    \pgfprocessround{\pgf@nfold@cachedpath}{\pgf@nfold@cachedpath}% remove tokens from the soft path
     \pgf@nfold@parsearrows%
-    \pgf@nfold@parsesoftpath{\cachedpath}{\parsedsoftpath}
+    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\parsedpath}
 %    \pgfwarning{new path: \meaning\pgf@nfold@parsedpath} % Debug output
     \pgf@nfold@run@loop%
   \endpgfscope%
@@ -1151,12 +1150,12 @@
     \edef\pgf@nfold@shift@fraction{#3}
     \pgf@x=\pgf@nfold@shift@fraction\pgf@x\relax
     \edef\pgf@nfold@shiftamount{\pgf@sys@tonumber\pgf@x}
-    \pgfprocessround{#1}{\cachedpath}% remove tokens from the soft path
-    \pgf@nfold@parsesoftpath{\cachedpath}{\parsedsoftpath}
+    \pgfprocessround{#1}{\pgf@nfold@cachedpath}% remove tokens from the soft path
+    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\parsedpath}%
 %    \pgfwarning{new path: \meaning\pgf@nfold@parsedpath}
   % Transformations are already baked into the path; without this call, they would be applied twice
     \pgftransformreset%
-    \pgf@nfold@parsedpath
+    \parsedpath%
   \endgroup
 }
 
