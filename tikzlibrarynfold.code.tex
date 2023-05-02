@@ -35,6 +35,7 @@
 %   - faster, less precise veclen@ -> this is used a lot
 %     - if x > y, compute x*(1+(y/x)^2)^(1/2) approx x*(A+B*(y/x)^2); optimize A=1. and B=.5 around the unit circle
 %     - could copy a lot of the existing veclen code; maybe skip the "scaling for precision" steps?
+%   - rendering: are quick commands an option? qmoveto, qlineto etc.?
 
 
 %
@@ -48,6 +49,131 @@
 % all this information in a "parsed path" macro. The structure of the parsed path resembles
 % the structure of a pgf soft path, but it consists of different tokens.
 %
+
+
+
+
+
+
+% TODO WIP: Handling closepath
+
+
+% TODO migrate modifications to other macro
+\def\pgf@nfold@addmacro@new#1{%
+  % need a \gdef because we have nested groups in the subdivision
+  \expandafter\expandafter\expandafter\gdef%
+  \expandafter\expandafter\expandafter#1%
+  \expandafter\expandafter\expandafter{%
+  \expandafter#1\pgf@nfold@macrotoadd}
+}
+
+%
+% Idea
+% ----
+% - normal non-closed path: movetotoken{x1}{y1} linetotoken {x2}{y2} ...
+% - closed path: change into movetotoken{x0}{y0} invisiblelinetotoken{x1}{y1} linetotoken{x2}{y2} ...
+%
+%
+%
+% In order to correctly implement \pgfpathclose, we need to parse the entire path twice, the reason being that we already need to know about the \pgfpathclose (and its point of origin) at the beginning of this connected segment in order to correctly draw the first/last join.
+% In the first pass we split the path into connected segments and collect the necessary data. Once we have found a connected segment, we execute the second pass on that segment.
+%
+% TODOs
+% - test path without a moveto at the beginning
+%
+%
+% Ideas for improvements:
+% - maybe we can skip parsing twice? Instead of adding the tokens back in, we could add in some macros which
+%   take over the functionality of the existing parser macros.
+%   - problem: curveto's take way more parameters, will prob. get ugly
+% - can we optimise away that the second parser is called once with only the first moveto?
+%   - will prob. get difficult if we also want to treat paths without a first moveto correctly
+%
+\def\pgf@nfold@parsetest#1{%
+  \let\my@conn@path\pgfutil@empty%
+  \let\all@segments\pgfutil@empty%
+%  \let\last@moveto@pt\pgfutil@empty%
+  \edef\last@moveto@pt{{\the\pgf@path@lastx}{\the\pgf@path@lasty}}%
+  \let\last@closepath@from\pgfutil@empty%
+  \expandafter\pgf@nfold@@parsetest#1\pgf@stop{}{}%
+}%
+
+\def\pgfsyssoftpath@nfold@invisibleline#1#2{invisiblelinetoken} % make sure this \ifx-equal only to itself
+
+\def\handlecomplete{%
+  % Use a group to avoid overwriting commands like \pgf@next;
+  % might also be beneficial for memory usage
+  \begingroup%
+    % save the current macro so we can add it to both the current and the next connected segment
+    \let\my@tmp@stuff\pgf@nfold@macrotoadd
+    % Add in the beginning of the path
+    \ifx\last@closepath@from\pgfutil@empty
+      \edef\path@start{\noexpand\pgfsyssoftpath@movetotoken\last@moveto@pt}%
+    \else
+      % TODO first hacky approach, incomplete
+      \edef\path@start{%
+        \noexpand\pgfsyssoftpath@movetotoken\last@closepath@from%
+        \noexpand\pgfsyssoftpath@nfold@invisibleline\last@moveto@pt%
+      }%
+    \fi
+    % add the start of the path
+    \let\pgf@nfold@macrotoadd\my@conn@path%
+    \pgf@nfold@addmacro@new\path@start%
+  %  \pgfwarning{passing connected path: \meaning\my@conn@path}%
+    \pgfwarning{new approach: \meaning\path@start}%
+  %  \pgf@nfold@parsesoftpath{\my@conn@path}{\pgf@nfold@macrotoadd}%
+    \pgf@nfold@parsesoftpath{\path@start}{\pgf@nfold@macrotoadd}%
+    \pgf@nfold@addmacro@new\all@segments%
+  \endgroup%
+}
+
+\def\pgf@nfold@@parsetest#1#2#3{%
+  \let\pgf@next\pgf@nfold@@parsetest%
+  \ifx#1\pgf@stop%
+    \handlecomplete%
+    \let\pgf@next\relax%
+  \else%
+    % pass on the unmodified macro
+    \def\pgf@nfold@macrotoadd{#1{#2}{#3}}%
+    \pgf@nfold@addmacro@new\my@conn@path%
+    % TODO this does not have well-defined behaviour if the path does not begin with a moveto;
+    % maybe I should initialise \last@moveto@pt to the previously moved-to pgf point instead
+    % Other option: Check if \my@conn@path is empty?
+    % Yet another alternative: Try to kill the first three tokens in my@conn@path
+    \ifx#1\pgfsyssoftpath@movetotoken%
+      % A moveto marks the beginning/end of one connected segment
+      \handlecomplete%
+      \let\my@conn@path\pgfutil@empty%
+      \let\last@closepath@from\pgfutil@empty%
+      \def\last@moveto@pt{{#2}{#3}}%
+    \else%
+      \ifx#1\pgfsyssoftpath@closepathtoken%
+        \let\last@closepath@from\previous@pt%
+%      \ifx#1\pgfsyssoftpath@linetotoken%
+%        \let\pgf@next\pgf@nfold@parselineto%
+%      \else%
+%        \ifx#1\pgfsyssoftpath@curvetosupportatoken%
+%          \let\pgf@next\pgf@nfold@parsecurveto%
+%        \else%
+%          \ifx#1\pgfsyssoftpath@closepathtoken%
+%            \let\pgf@next\pgf@nfold@parseclosepath%
+%          \else%
+%            \ifx#1\pgfsyssoftpath@rectcornertoken%
+%              \let\pgf@next\pgf@nfold@parserect%
+%            \else%
+%              \pgfutil@packageerror{tikz-nfold}{Unrecognised soft path token `#1'}{}%
+%            \fi%
+%          \fi%
+%        \fi%
+      \fi%
+    \fi%
+  \fi%
+  \def\previous@pt{{#2}{#3}}%
+  \pgf@next%
+}%
+
+
+
 
 
 %
@@ -510,6 +636,12 @@
         \pgf@subdividecurve{\pgf@nfold@cur@movedfirst}{\pgf@nfold@cur@supporta}{\pgf@nfold@cur@supportb}{\pgf@nfold@cur@movedlast}{\pgf@offset@max@recursion}{0}{\pgf@nfold@addcurvesegment@callback}%
       \fi
     \fi
+    \if\pgf@nfold@cur@type i
+      \edef\pgf@nfold@macrotoadd{%
+        \noexpand\pgf@nfold@token@invisibleline{\pgf@nfold@cur@movedfirst}{\pgf@nfold@cur@movedlast}{\pgf@nfold@cur@tang@i}%
+      }%
+      \pgf@nfold@addmacro%
+    \fi
     % Step 4: Extend into the arrow tip at the end (if present)
     \if\pgf@nfold@next@type t%
       \ifnum\pgf@nfold@end@arrowcode=1
@@ -823,7 +955,11 @@
             \ifx#1\pgfsyssoftpath@rectcornertoken%
               \let\pgf@next\pgf@nfold@parserect%
             \else%
-              \pgfutil@packageerror{tikz-nfold}{Unrecognised soft path token `#1'}{}%
+              \ifx#1\pgfsyssoftpath@nfold@invisibleline%
+                \let\pgf@next\pgf@nfold@parseinvisibleline%
+              \else%
+                \pgfutil@packageerror{tikz-nfold}{Unrecognised soft path token `#1'}{}%
+              \fi%
             \fi%
           \fi%
         \fi%
@@ -831,6 +967,11 @@
     \fi%
   \fi%
   \pgf@next}%
+
+%
+% Values for \pgf@nfold@next@type:
+% f=first, m=moveto, c=curveto, l=lineto, r=rect, o=closepath, t=last, i=invisibleline
+%
 
 \def\pgf@nfold@parsemoveto#1#2{%
   \let\pgf@nfold@next@type=m%
@@ -889,6 +1030,15 @@
   \pgf@nfold@@parsesoftpath%
 }%
 
+\def\pgf@nfold@parseinvisibleline#1#2{%
+  \pgf@process{\pgfpointdiff{\pgf@nfold@cur@last}{\pgf@x#1\pgf@y#2}}%
+  % invisibleline segments should always be processed even if they have zero length.
+  % Counterintuitively, an "invisibleline" segment has next@visible=1 because
+  % we want its end join to be rendered.
+  \pgf@nfold@parse@line@common{#1}{#2}{i}%
+  \pgf@nfold@@parsesoftpath%
+}%
+
 \def\pgf@nfold@parselast{%
   \let\pgf@nfold@next@type=t%
   \let\pgf@nfold@next@visible=0%
@@ -936,6 +1086,7 @@
 
 %
 % Tokens for the parsed path
+% TODO rename; these aren't actually tokens
 %
 
 %#3: normalised tangent (for efficiency)
@@ -948,6 +1099,15 @@
 \def\pgf@nfold@token@lineto@continue#1#2#3{%
 %  \pgfoffsetline{#1}{#2}{\pgf@nfold@shiftamount}%
   \pgfoffsetlinenomove@{#1}{#2}{\pgf@nfold@shiftamount}{#3}%
+}
+
+\def\pgf@nfold@token@invisibleline#1#2#3{%
+  % An invisible line should execute a moveto to the end point of the line
+  \pgfqpointscale{\pgf@nfold@shiftamount}{#3}%
+  \pgf@xc=-\pgf@y%
+  \pgf@y=\pgf@x%
+  \pgf@x=\pgf@xc%
+  \pgfpathmoveto{\pgfpointadd{}{#2}}%
 }
 
 % #5, #6: normalised tangents at start and end (for efficiency)
@@ -982,10 +1142,7 @@
 }
 
 
-
 \def\pgf@nfold@parse@setupfirst{%
-  % Status variables
-  % types: f=first, m=moveto, c=curveto, l=lineto, r=rect, o=closepath, t=last
   \let\pgf@nfold@next@type=f%
   % technically, @visible can be derived from @type, but I think this is more efficient
   \let\pgf@nfold@next@visible=0%
@@ -1067,7 +1224,8 @@
   \pgfmathsetmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@nfold@shift@fraction}
   % Transformations are already baked into the path; without this call, they would be applied twice
   \pgftransformreset%
-  \parsedpath%
+%  \parsedpath%
+  \all@segments% TODO refactor
   \pgfsyssoftpath@flushcurrentpath%
   \pgf@up@action%
 }
@@ -1092,7 +1250,8 @@
     \edef\pgf@nfold@hwidth{\the\pgf@y}%
     \pgfprocessround{\pgf@nfold@cachedpath}{\pgf@nfold@cachedpath}% remove tokens from the soft path
     \pgf@nfold@parsearrows%
-    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\parsedpath}
+%    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\parsedpath}
+    \pgf@nfold@parsetest{\pgf@nfold@cachedpath} % TODO refactor
 %    \pgfwarning{new path: \meaning\pgf@nfold@parsedpath} % Debug output
     \pgf@nfold@run@loop%
   \endpgfscope%
@@ -1151,11 +1310,12 @@
     \pgf@x=\pgf@nfold@shift@fraction\pgf@x\relax
     \edef\pgf@nfold@shiftamount{\pgf@sys@tonumber\pgf@x}
     \pgfprocessround{#1}{\pgf@nfold@cachedpath}% remove tokens from the soft path
-    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\parsedpath}%
-%    \pgfwarning{new path: \meaning\pgf@nfold@parsedpath}
+%    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\parsedpath}%
+    \pgf@nfold@parsetest{\pgf@nfold@cachedpath}% TODO refactor
   % Transformations are already baked into the path; without this call, they would be applied twice
     \pgftransformreset%
-    \parsedpath%
+%    \parsedpath%
+    \all@segments% TODO refactor
   \endgroup
 }
 
