@@ -878,8 +878,8 @@
     \expandafter\pgf@nfold@parsemoveto\pgf@nfold@parser@last@moveto%
   \else%
     % This connected segment ends on a closepath. In order to get
-		% the join right, we prepend the current segment with an invisible line
-		% identical to the line of the \pgfpathclose. This way, 
+    % the join right, we prepend the current segment with an invisible line
+    % identical to the line of the \pgfpathclose. This way, 
     \expandafter\pgf@nfold@parsemoveto\pgf@nfold@last@closepath@from%
     \expandafter\pgf@nfold@parseinvisibleline\pgf@nfold@parser@last@moveto%
   \fi%
