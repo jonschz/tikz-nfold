@@ -23,18 +23,12 @@
 % Notes / TODO
 % ------------
 %
-% - diff against prior version for minimal modification
+% - update documentation
 %
 % Future
 % ------
 % - closepath test cases:
 %   - close joins edge case at the start/end/both
-% - possible optimisations
-%   - the A1A4 length is computed for every offset; this is something we could cache from the subdivision phase
-%   - faster, less precise veclen@ -> this is used a lot
-%     - if x > y, compute x*(1+(y/x)^2)^(1/2) approx x*(A+B*(y/x)^2); optimize A=1. and B=.5 around the unit circle
-%     - could copy a lot of the existing veclen code; maybe skip the "scaling for precision" steps?
-%   - rendering: are quick commands an option? qmoveto, qlineto etc.?
 
 
 %
@@ -969,7 +963,6 @@
   \pgf@nfold@parser@moveup%
   \let\pgf@nfold@next@type=t%
   \let\pgf@nfold@next@visible=0%
-  \let\pgf@nfold@next@last\pgfpointorigin% TODO probably not needed
   \pgf@nfold@parser@handlesegment%
 }
 
@@ -1005,20 +998,17 @@
   \expandafter#1\pgf@nfold@macrotoadd}%
 }
 
+
 %
 % Tokens for the parsed path
-% TODO rename; these aren't actually tokens
 %
 
-%#3: normalised tangent (for efficiency)
+%#3: cached normalised tangent (for efficiency)
 \def\pgf@nfold@token@lineto#1#2#3{%
-%  \pgfpathmoveto{#1}%
-%  \pgfpathlineto{#2}%
   \pgfoffsetline@{#1}{#2}{\pgf@nfold@shiftamount}{#3}%
 }
 
 \def\pgf@nfold@token@lineto@continue#1#2#3{%
-%  \pgfoffsetline{#1}{#2}{\pgf@nfold@shiftamount}%
   \pgfoffsetlinenomove@{#1}{#2}{\pgf@nfold@shiftamount}{#3}%
 }
 
@@ -1031,11 +1021,8 @@
   \pgfpathmoveto{\pgfpointadd{}{#2}}%
 }
 
-% #5, #6: normalised tangents at start and end (for efficiency)
+% #5, #6: cached normalised tangents at start and end (for efficiency)
 \def\pgf@nfold@token@curveto#1#2#3#4#5#6{%
-%  \pgfwarning{curve: #1 #2 #3 #4 tangents: #5 #6}
-%  \pgfpathmoveto{#1}%
-%  \pgfpathcurveto{#2}{#3}{#4}%
   \def\pgf@tmp@tang@i{#5}%
   \def\pgf@tmp@tang@ii{#6}%
   \pgf@offset@bezier@segment@{#1}{#2}{#3}{#4}{\pgf@nfold@shiftamount}%
@@ -1096,7 +1083,6 @@
 
 
 \def\pgf@nfold@parser@moveup{%
-% todo check if visible, skip a bunch of commands if not
   \let\pgf@nfold@prev@type\pgf@nfold@cur@type%
   \let\pgf@nfold@prev@visible\pgf@nfold@cur@visible%
   \let\pgf@nfold@prev@tang@i\pgf@nfold@cur@tang@i%
