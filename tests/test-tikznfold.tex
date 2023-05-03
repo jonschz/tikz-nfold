@@ -164,6 +164,15 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
   \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5] (0,0) -- (3,0.5) (3,1) arc (0:180:1.5 and 1) -- (2.5,0.9) -- cycle;
 \end{tikzpicture}
 
+\subsection{Multiple closed paths}
+\begin{tikzpicture}
+  \path [draw=green,opacity=0.5, line width=5pt, save path=\tmppath]
+    (0,0) to[out=-10,in=190] (2,0) -- (1,1) -- cycle (3,0) -- (3,1)
+    (4,0) -- (6,0) -- (5,1) -- cycle (7,0) -- (7,1);
+  \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5, use path=\tmppath];
+\end{tikzpicture}
+
+
 \subsection{Different joins in the same diagram}
 
 \begin{tikzpicture}[line join=bevel, double distance=5pt, line width=.5pt, draw=purple, opacity=0.5]

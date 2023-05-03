@@ -854,7 +854,7 @@
               \pgf@nfold@addmacro\pgf@cur@conn@segment%
             \else%
               \ifx#1\pgfsyssoftpath@closepathtoken%
-                \let\pgf@nfold@last@closepath@from\previous@pt%
+                \let\pgf@nfold@last@closepath@from\pgf@nfold@parser@previous@pt%
                 \def\pgf@nfold@macrotoadd{\pgf@nfold@parseclosepath{#2}{#3}}%
                 \pgf@nfold@addmacro\pgf@cur@conn@segment%
               \else%
@@ -875,7 +875,7 @@
       \fi%
     \fi%
   \fi%
-  \def\previous@pt{{#2}{#3}}%
+  \def\pgf@nfold@parser@previous@pt{{#2}{#3}}%
   \pgf@next}%
 
 \def\pgf@nfold@process@conn@segment{%
@@ -883,6 +883,9 @@
   \ifx\pgf@nfold@last@closepath@from\pgfutil@empty%
     \expandafter\pgf@nfold@parsemoveto\pgf@nfold@parser@last@moveto%
   \else%
+    % This connected segment ends on a closepath. In order to get
+		% the join right, we prepend the current segment with an invisible line
+		% identical to the line of the \pgfpathclose. This way, 
     \expandafter\pgf@nfold@parsemoveto\pgf@nfold@last@closepath@from%
     \expandafter\pgf@nfold@parseinvisibleline\pgf@nfold@parser@last@moveto%
   \fi%
@@ -921,7 +924,7 @@
 }
 
 \def\pgf@nfold@parselineto#1#2{%
-  % because parser@moveup has not been called yet, the current end is still stored in next@last
+  % the current end is still stored in next@last because parser@moveup has not been called yet
   \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
   \pgfpointtaxicabnorm\pgf@xa%
   % remove degenerate line segments (reduces glitches)
