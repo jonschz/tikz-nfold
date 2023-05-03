@@ -203,7 +203,6 @@ This package is by no means perfect, and even if it were, there would still be s
 \subsection{Fixable / wish list}
 \begin{itemize}
   \item \nfold{} is significantly slower than \tikzdouble. Part of the reason is that the construction is far more complex, but the code is also far from fully optimised.
-  \item Closing paths (i.e.\ using \texttt{-- cycle}) is not yet fully supported: The output will not be correct if the angle between the first and last segment differs from zero.
   \item Some rare cases of curves are not offset correctly. The reasons for that are discussed below in \cref{subsec:subdivisionUsed}. Usually, slightly changing the control points or values of the curve will fix the problem. If you find any, please open an issue.
 \end{itemize}
 
@@ -240,17 +239,17 @@ This package is by no means perfect, and even if it were, there would still be s
 \end{tikzpicture}
 \end{tkzexample}
   This cannot be fixed without extensive use of the \texttt{intersections} library, hurting the performance, and the result might still not look great for orders $\geq 3$.
-  \item Very short \emph{curves} with large angles at the ends result in a glitched output:
+  \item Very short \emph{curves} with large angles at the ends result in a glitched output:\nopagebreak
 \begin{tkzexample}[latex=3.75cm,pre=\disablewarnings]
-\begin{tikzpicture}
+\begin{tikzpicture}[line join=round]
   \draw[black] (1,0) -- (3,0) -- (1.5,1.2) -- (3.8,0.85);
-  \draw[red, line width=1pt, double distance=.6cm, nfold]
+  \draw[red, line width=1pt, double distance=.7cm, nfold]
     (1,0) -- (3,0) -- (1.5, 1.2) -- (3.8,0.85);
-  \draw[blue, double distance=.6cm, nfold] (1,0) -- (3,0)
+  \draw[blue, double distance=.7cm, nfold] (1,0) -- (3,0)
     to[relative, out=1, in=179] (1.5, 1.2) -- (3.8,0.85);
 \end{tikzpicture}
 \end{tkzexample}
-  This issue has been fixed for \emph{straight lines} in version \texttt{0.1.0} (note how the red line is offset correctly), but it is much harder to fix for curves.
+  This issue has been fixed for \emph{straight} lines in version \texttt{0.1.0} (note how the red line is offset correctly), but it is much harder to fix for curves.
   \item Changing joins in \verb|\pgfsys@beginscope| without an accompanying \TeX{} group may cause inconsistent behaviour in the joins:
 \begin{tkzexample}[latex=2cm]
 \makeatletter
@@ -329,6 +328,12 @@ Here we see how the commands can be used to customise $n$-fold paths:
 \section{Version history}
 
 \begin{itemize}
+  \item \textbf{v0.1.1}: Closing paths and structural changes
+  \begin{itemize}
+    \item Support for closed paths (\texttt{cycle} and \verb|\pgfpathclose|)
+    \item Significant performance improvements due to structural changes
+    \item Minor bug fixes and optimisations
+\end{itemize}
   \item \textbf{v0.1.0}: Major overhaul
   \begin{itemize}
     \item Support for arbitrary arrow tips
