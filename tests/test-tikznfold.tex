@@ -68,6 +68,24 @@ Note that this is \emph{not} called by TikZ' \texttt{rectangle} option.
   \pgfusepath{stroke,nfold}
 \end{pgfpicture}
 
+\subsection{A path without a moveto (slight bug at the moment)}
+Compare
+\begin{pgfpicture}
+  \pgfpathlineto{\pgfpoint{1cm}{1cm}}
+  \pgfpathlineto{\pgfpoint{2cm}{0cm}}
+  \pgfsetlinewidth{3pt}
+  \pgfsetinnerlinewidth{2pt}
+  \pgfusepath{stroke}
+\end{pgfpicture}
+to
+\begin{pgfpicture}
+  \pgfpathlineto{\pgfpoint{1cm}{1cm}}
+  \pgfpathlineto{\pgfpoint{2cm}{0cm}}
+  \pgfsetlinewidth{3pt}
+  \pgfsetinnerlinewidth{2pt}
+  \pgfusepath{stroke,nfold}
+\end{pgfpicture}
+
 \subsection{An example where \textbackslash pgf@prepare@start@of@path is not called}
 Here the nfold preparation code must be injected into \verb|\pgf@path@check@proper|.
 {
