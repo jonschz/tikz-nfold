@@ -274,8 +274,6 @@
 }
 
 
-
-
 %
 % Main rendering pipeline
 % -----------------------
@@ -292,8 +290,6 @@
 
 
 \def\pgf@nfold@parser@handlesegment{%
-  % Debug output
-%  \pgfwarning{previous type: \meaning\pgf@nfold@prev@type; current type: \meaning\pgf@nfold@cur@type; next type: \meaning\pgf@nfold@next@type}
   \if\pgf@nfold@cur@visible 0
     % first, last and moveto are invisible
     \if\pgf@nfold@cur@type m
@@ -346,8 +342,8 @@
         \pgf@nfold@angletoosharptrue
       \else
         \ifdim\pgf@xb>0.5pt\relax
-           % make room for the start join if the angle is nonzero;
-           % shortenstartjoin := hwidth*tan(.5*abs(deltaphi@start))
+          % make room for the start join if the angle is nonzero;
+          % shortenstartjoin := hwidth*tan(.5*abs(deltaphi@start))
           \pgf@yb=.5\pgf@xb
           \pgfmathtan@{\pgf@sys@tonumber\pgf@yb}
           \pgf@yb=\pgf@nfold@hwidth\relax
@@ -356,12 +352,11 @@
           \pgfextract@process\pgf@nfold@cur@movedfirst{%
             \pgfpointadd{\pgf@nfold@cur@first}%
                         {\pgfqpointscale{\pgf@nfold@shortenstartjoin}{\pgf@nfold@cur@tang@i}}}%
-            % If the current segment is a curve, we need to relocate @supporta point as well,
-            % as otherwise the @first point could overtake it
+          % If the current segment is a curve, we need to relocate @supporta point as well,
+          % as otherwise the @first point could overtake it
           \if\pgf@nfold@cur@type c
             \pgf@process{\pgfpointdiff{\pgf@nfold@cur@first}{\pgf@nfold@cur@supporta}}
             \pgfmathveclen@{\pgf@sys@tonumber\pgf@x}{\pgf@sys@tonumber\pgf@y}
-            \pgfmathveclen@{\pgfmathresult}{\pgf@sys@tonumber\pgf@yb}
             \ifdim\pgfmathresult pt>0.1pt\relax
               % regular curves (supporta != first):
               % Increase dist(first, supporta) to sqrt(a^2 + b^2) where a=dist(first, supporta) and b=shortenstart. This way, the order of first and supporta is guaranteed to be preserved, and the change to supporta is as small as reasonably possible.
@@ -372,15 +367,14 @@
                 {\pgfqpointpolar{\pgf@nfold@cur@angle@i}{\pgfmathresult pt}}}%
             \else
               % special treatment for singular curves (supporta = first) to avoid rounding error glitches.
-              % In this special case, a slight corner at the end of the join is unavoidable
-              \let\pgf@nfold@inputsegment@supporta\pgf@nfold@cur@movedfirst
+              % In this special case, a slight corner at the end of the join is unavoidable unless we
+              % also relocate @supportb, which may have unintended side effects
+              \let\pgf@nfold@cur@supporta\pgf@nfold@cur@movedfirst
             \fi
           \fi
         \fi
       \fi
     \else
-      % Set a default value for \ifpgf@nfold@continuesegment.
-      % It may be overwritten by \pgf@nfold@extendtotip
       \pgf@nfold@continuesegmentfalse
     \fi
     % Step 1.2: Make room for the join at the end if needed
@@ -717,8 +711,6 @@
 }
 
 
-
-
 %
 % Hooking into pgf's rendering pipeline
 % -------------------------------------
@@ -927,7 +919,6 @@
   \fi%
 }%
 
-%\def\pgf@nfold@parsecurveto#1#2\pgfsyssoftpath@curvetosupportbtoken#3#4\pgfsyssoftpath@curvetotoken#5#6{%
 \def\pgf@nfold@parsecurveto#1#2#3#4#5#6{%
   \pgf@nfold@parser@moveup%
   \pgf@offset@compute@tangents{\pgf@nfold@cur@last}{\pgf@x#1\pgf@y#2}{\pgf@x#3\pgf@y#4}{\pgf@x#5\pgf@y#6}%
