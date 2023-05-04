@@ -68,6 +68,24 @@ Note that this is \emph{not} called by TikZ' \texttt{rectangle} option.
   \pgfusepath{stroke,nfold}
 \end{pgfpicture}
 
+\subsection{A path without a moveto (slight bug at the moment)}
+Compare
+\begin{pgfpicture}
+  \pgfpathlineto{\pgfpoint{1cm}{1cm}}
+  \pgfpathlineto{\pgfpoint{2cm}{0cm}}
+  \pgfsetlinewidth{3pt}
+  \pgfsetinnerlinewidth{2pt}
+  \pgfusepath{stroke}
+\end{pgfpicture}
+to
+\begin{pgfpicture}
+  \pgfpathlineto{\pgfpoint{1cm}{1cm}}
+  \pgfpathlineto{\pgfpoint{2cm}{0cm}}
+  \pgfsetlinewidth{3pt}
+  \pgfsetinnerlinewidth{2pt}
+  \pgfusepath{stroke,nfold}
+\end{pgfpicture}
+
 \subsection{An example where \textbackslash pgf@prepare@start@of@path is not called}
 Here the nfold preparation code must be injected into \verb|\pgf@path@check@proper|.
 {
@@ -118,7 +136,7 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
   \begin{tikzpicture}
     \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0.01);
   \end{tikzpicture}\\
-  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
+  Expectation: Finite-sized output, pgf warning ``angle too sharp''\\[.5em]
   Actual warning: \errormsg
 
   \subsubsection{Exactly 180 degree turn}
@@ -126,7 +144,7 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
   \begin{tikzpicture}
     \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0);
   \end{tikzpicture}\\
-  Expectation: Finite-sized output, pgf warning ``angle too sharp'' ($\times 4$)\\[.5em]
+  Expectation: Finite-sized output, pgf warning ``angle too sharp''\\[.5em]
   Actual warning: \errormsg
 }
 
@@ -144,6 +162,14 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
 \begin{tikzpicture}
     \path [draw=green,opacity=0.5, line width=5pt] (0,0) -- (3,0.5) (3,1) arc (0:180:1.5 and 1) -- (2.5,0.9) -- cycle;
   \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5] (0,0) -- (3,0.5) (3,1) arc (0:180:1.5 and 1) -- (2.5,0.9) -- cycle;
+\end{tikzpicture}
+
+\subsection{Multiple closed paths}
+\begin{tikzpicture}
+  \path [draw=green,opacity=0.5, line width=5pt, save path=\tmppath]
+    (0,0) to[out=-10,in=190] (2,0) -- (1,1) -- cycle (3,0) -- (3,1)
+    (4,0) -- (6,0) -- (5,1) -- cycle (7,0) -- (7,1);
+  \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5, use path=\tmppath];
 \end{tikzpicture}
 
 \subsection{Different joins in the same diagram}
@@ -184,7 +210,6 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
 \end{tikzpicture}
 
 \subsection{Degenerate paths and tips}
-The second example has some slightly incorrect behaviour, but I don't expect many cases where this would be relevant.
 \begin{tikzpicture}
   \draw[draw=green,opacity=.5,double distance=3pt, arrows=|-|] (0,0) (.25,0) -- (.75,0) (1,0);
   \draw[draw=purple, opacity=.5,double distance=3pt, arrows=|-|, nfold=4] (0,0) (.25,0) -- (.75,0) (1,0);
@@ -221,6 +246,20 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \draw[black] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
   \draw[blue, double distance=1cm, nfold=4] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
   \draw[red, double distance=.32cm, nfold=2, opacity=.5] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
+\end{tikzpicture}
+
+\subsection{Closed paths and the close joins edge case}
+\subsubsection{Short first segment}
+\begin{tikzpicture}
+  \draw[draw=green,opacity=0.5, line width=5.8pt, save path=\tmppath] (1,1) -- (1,1.1) -- (3,1.1) -- (3,0) -- (0,0) -- (0,1) -- cycle;
+  \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
+\end{tikzpicture}
+
+\subsubsection{Short last segment}
+This edge case needs special handling which is not implemented yet.\\
+\begin{tikzpicture}
+  \draw[draw=green,opacity=0.5, line width=5.8pt, save path=\tmppath] (1,1.1) -- (3,1.1) -- (3,0) -- (0,0) -- (0,1) -- (1,1) -- cycle;
+  \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
 \end{tikzpicture}
 
 \subsection{Key \texttt{/tikz/scaling nfold}}

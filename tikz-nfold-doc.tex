@@ -44,8 +44,8 @@
 \newcommand{\tikznfold}{\texttt{/tikz/nfold}}
 
 \pgfkeys{/tkzexample/every tkzexample/.style={
-		code=violet!15, graphic=orange!20, very small,above skip={\vskip1em},below skip={\vskip1em}
-	}
+    code=violet!15, graphic=orange!20, very small,above skip={\vskip1em},below skip={\vskip1em}
+  }
 }
 
 \newcommand{\tv}{\vec{t}}
@@ -203,8 +203,8 @@ This package is by no means perfect, and even if it were, there would still be s
 \subsection{Fixable / wish list}
 \begin{itemize}
   \item \nfold{} is significantly slower than \tikzdouble. Part of the reason is that the construction is far more complex, but the code is also far from fully optimised.
-  \item Closing paths (i.e.\ using \texttt{-- cycle}) is not yet fully supported: The output will not be correct if the angle between the first and last segment differs from zero.
   \item Some rare cases of curves are not offset correctly. The reasons for that are discussed below in \cref{subsec:subdivisionUsed}. Usually, slightly changing the control points or values of the curve will fix the problem. If you find any, please open an issue.
+  \item Closed paths can glitch slightly when the final segment is very short and has non-zero angles on both ends.
 \end{itemize}
 
 \subsection{Impossible or very hard to fix}
@@ -240,17 +240,17 @@ This package is by no means perfect, and even if it were, there would still be s
 \end{tikzpicture}
 \end{tkzexample}
   This cannot be fixed without extensive use of the \texttt{intersections} library, hurting the performance, and the result might still not look great for orders $\geq 3$.
-  \item Very short \emph{curves} with large angles at the ends result in a glitched output:
+  \item Very short \emph{curves} with large angles at the ends result in a glitched output:\nopagebreak
 \begin{tkzexample}[latex=3.75cm,pre=\disablewarnings]
-\begin{tikzpicture}
+\begin{tikzpicture}[line join=round]
   \draw[black] (1,0) -- (3,0) -- (1.5,1.2) -- (3.8,0.85);
-  \draw[red, line width=1pt, double distance=.6cm, nfold]
+  \draw[red, line width=1pt, double distance=.7cm, nfold]
     (1,0) -- (3,0) -- (1.5, 1.2) -- (3.8,0.85);
-  \draw[blue, double distance=.6cm, nfold] (1,0) -- (3,0)
+  \draw[blue, double distance=.7cm, nfold] (1,0) -- (3,0)
     to[relative, out=1, in=179] (1.5, 1.2) -- (3.8,0.85);
 \end{tikzpicture}
 \end{tkzexample}
-  This issue has been fixed for \emph{straight lines} in version \texttt{0.1.0} (note how the red line is offset correctly), but it is much harder to fix for curves.
+  This issue has been fixed for \emph{straight} lines in version \texttt{0.1.0} (note how the red line is offset correctly), but it is much harder to fix for curves.
   \item Changing joins in \verb|\pgfsys@beginscope| without an accompanying \TeX{} group may cause inconsistent behaviour in the joins:
 \begin{tkzexample}[latex=2cm]
 \makeatletter
@@ -329,6 +329,12 @@ Here we see how the commands can be used to customise $n$-fold paths:
 \section{Version history}
 
 \begin{itemize}
+  \item \textbf{v0.1.1}: Closing paths and structural changes
+  \begin{itemize}
+    \item Support for closed paths (\texttt{cycle} and \verb|\pgfpathclose|)
+    \item Significant performance improvements due to structural changes
+    \item Minor bug fixes and optimisations
+\end{itemize}
   \item \textbf{v0.1.0}: Major overhaul
   \begin{itemize}
     \item Support for arbitrary arrow tips
@@ -395,17 +401,17 @@ In this library we instead take a recursive approach:
 \begin{verbatim}
   def makeSimple(A, level):
     if isSimple(A):
-      segments += [A]
+      segments.append(A)
     else:
       if level < 0:
         Display a warning
-        segments += [A]
+        segments.append(A)
       else:
         first, second = split(A, t=0.5)
         makeSimple(first, level-1)
         makeSimple(second, level-1)
 \end{verbatim}
-The default maximum depth is 5, so the curve is split into at most $2^5 = 32$ segments. This has the downside that some simple but not fully simple curves may remain undetected and be offset slightly incorrectly. If you encounter examples of such curves with bad outputs or if you have any ideas for additional constraints to add to \cref{def:simpleCurve} that can be checked with reasonable computational effort, please be in touch.
+The default maximum depth is 5, so the curve is split into at most $2^5 = 32$ segments. This has the downside that some simple but not fully simple curves may remain undetected and be offset slightly incorrectly. If you encounter examples of such curves with bad outputs, or if you have any ideas for additional constraints to add to \cref{def:simpleCurve} that can be checked with reasonable computational effort, please be in touch.
 
 
 \subsection{Offsetting simple Bézier curves}
@@ -414,7 +420,7 @@ Disregarding edge cases (which will be discussed later), offsetting the curve wo
 \begin{enumerate}
   \item Construct lines orthogonal to the tangent in $A_1$ and $A_4$ and find their intersection. This point is called the \emph{origin} of the curve, denoted by $O$.
   \item The new control points $A'_1$ and $A'_4$ are given by $A_1$ and $A_4$ offset orthogonally to the tangent.
-  \item Construct a ray from $A'_1$ parallel to the tangent in $A_1$, and construct another ray from the origin through $A_2$. Now $A'_2$ is given by the intersection of those rays.
+  \item Construct a ray from $A'_1$ parallel to the tangent in $A_1$, and construct another ray from $O$ through $A_2$. Now $A'_2$ is defined to be the intersection of those rays.
   \item $A'_3$ can be constructed similarly.
 \end{enumerate}
 The construction is shown in the following picture:
