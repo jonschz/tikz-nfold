@@ -172,7 +172,6 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
   \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold=5, use path=\tmppath];
 \end{tikzpicture}
 
-
 \subsection{Different joins in the same diagram}
 
 \begin{tikzpicture}[line join=bevel, double distance=5pt, line width=.5pt, draw=purple, opacity=0.5]
@@ -247,6 +246,20 @@ The desynchronisation in the latter case is a fundamental limitation of this app
   \draw[black] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
   \draw[blue, double distance=1cm, nfold=4] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
   \draw[red, double distance=.32cm, nfold=2, opacity=.5] (0, 4) -- (3,4) -- (2, 4-1.2) -- (6, 4-.8);
+\end{tikzpicture}
+
+\subsection{Closed paths and the close joins edge case}
+\subsubsection{Short first segment}
+\begin{tikzpicture}
+  \draw[draw=green,opacity=0.5, line width=5.8pt, save path=\tmppath] (1,1) -- (1,1.1) -- (3,1.1) -- (3,0) -- (0,0) -- (0,1) -- cycle;
+  \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
+\end{tikzpicture}
+
+\subsubsection{Short last segment}
+This edge case needs special handling which is not implemented yet.\\
+\begin{tikzpicture}
+  \draw[draw=green,opacity=0.5, line width=5.8pt, save path=\tmppath] (1,1.1) -- (3,1.1) -- (3,0) -- (0,0) -- (0,1) -- (1,1) -- cycle;
+  \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
 \end{tikzpicture}
 
 \subsection{Key \texttt{/tikz/scaling nfold}}

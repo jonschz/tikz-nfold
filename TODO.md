@@ -1,5 +1,11 @@
 # TODO
 
+## Known issue
+- Closed paths are not yet rendered correctly when the final (`\pgfpathclose`) segment is an edge case. There are multiple reasons for this:
+  1. `invisibleline` and `closepath` segments must be checked for the edge case, which is not implemented yet
+  1. `invisibleline` and `closepath` segments must be shortened on *both* ends, so their start *and* end angles must be set correctly. Furthermore, they must be shortened even though their previous/subsequent segment is formally invisible. Neither is implemented
+  1. If the above were implemented, there may still be issues left to solve
+
 ## Near future
 - consider splitting `tikzlibrarynfold.code.tex` into a pgf and a TikZ library, as most of it does not need TikZ
 - look for potential issues with large paper sizes
