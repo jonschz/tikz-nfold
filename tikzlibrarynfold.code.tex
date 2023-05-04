@@ -20,17 +20,6 @@
 \usepgflibrary{bezieroffset}
 
 
-% Notes / TODO
-% ------------
-%
-% - update documentation
-%
-% Future
-% ------
-% - closepath test cases:
-%   - close joins edge case at the start/end/both
-
-
 %
 % General idea
 % ============
@@ -40,7 +29,7 @@
 % for the joins, and most curves must be subdivided for the offsetting algorithm. To avoid
 % redundant computations in n-fold paths, we pre-compute as much data as possible and store
 % all this information in a "parsed path" macro. The structure of the parsed path resembles
-% the structure of a pgf soft path, but it consists of different tokens.
+% the structure of a pgf softpath, but it consists of different tokens.
 %
 
 
