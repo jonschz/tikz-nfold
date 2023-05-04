@@ -1,5 +1,5 @@
 # tikz-nfold 
-## Version 0.1.0
+## Version 0.1.1
 
 This library adds higher-order paths to [TikZ](https://ctan.org/pkg/pgf) and also fixes some graphical issues with TikZ' `double` paths, used e.g. in wide arrows. It is also compatible with [tikz-cd](https://ctan.org/pkg/tikz-cd), adding support for triple and higher arrows. See the [documentation](tikz-nfold-doc.pdf) for full details.
 
