@@ -806,13 +806,24 @@
     \let\pgf@next\relax%
   \else%
     \ifx#1\pgfsyssoftpath@movetotoken%
-      \def\pgf@nfold@macrotoadd{\pgf@nfold@parsemoveto{#2}{#3}}%
-      \pgf@nfold@addmacro\pgf@cur@conn@segment%
-      % A moveto marks the beginning/end of one connected segment
-      \pgf@nfold@process@conn@segment%
-      \let\pgf@nfold@last@closepath@from\pgfutil@empty%
-      \let\pgf@cur@conn@segment\pgfutil@empty%
-      \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
+      \ifx\pgf@cur@conn@segment\pgfutil@empty%
+        % This case happens for the very first segment or for double movetos.
+        % We need special treatment here, as otherwise the arrow tip extension
+        % does not work correctly. The \pgf@nfold@parsemoveto will be called
+				% in \pgf@nfold@process@conn@segment.
+        \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
+        % Make sure \pgf@cur@conn@segment is no longer empty so double movetos are not
+        % treated the same as single movetos. This is also relevant to arrow tip extensions
+        \def\pgf@cur@conn@segment{\relax}%
+      \else%
+        \def\pgf@nfold@macrotoadd{\pgf@nfold@parsemoveto{#2}{#3}}%
+        \pgf@nfold@addmacro\pgf@cur@conn@segment%
+        % A moveto marks the beginning/end of one connected segment
+        \pgf@nfold@process@conn@segment%
+        \let\pgf@nfold@last@closepath@from\pgfutil@empty%
+        \let\pgf@cur@conn@segment\pgfutil@empty%
+        \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
+      \fi
     \else%
       \ifx#1\pgfsyssoftpath@linetotoken%
         \def\pgf@nfold@macrotoadd{\pgf@nfold@parselineto{#2}{#3}}%
