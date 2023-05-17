@@ -276,19 +276,24 @@
 \newif\ifpgf@nfold@angletoosharp
 % This stores whether we need the intersections library for an arrow tip but it is not loaded
 \newif\ifpgf@nfold@intersectionsnotloaded
-% This stores whether the currently processed connected segment is the final one on this path
-\newif\ifpgf@nfold@lastconnsegment
+% This stores whether the currently processed connected sub-path is the final one on this path
+\newif\ifpgf@nfold@lastconnsubpath
 
 
 \def\pgf@nfold@parser@handlesegment{%
   \if\pgf@nfold@cur@visible0
     % first, last and moveto are invisible
     \if\pgf@nfold@cur@type m
-      % We don't need to do anything for a moveto: If a visible segment follows, it will move to
+      % We don't need to do anything for a moveto; if a visible segment follows, it will move to
       % its starting location by itself. However, we might need to draw the arrow tip extension
       % at the start (if present).
+			% Draw a tip extension only if all of the following conditions are met:
+			% 1. There is an Implies tip at the start of this path
+			% 2. We are currently on the last connected sub-path of this path
+			% 3. The next segment is visible
+			% 4. This moveto is the first segment on this path
       \if\pgf@nfold@start@arrowcode1
-        \ifpgf@nfold@lastconnsegment
+        \ifpgf@nfold@lastconnsubpath
           \if\pgf@nfold@prev@type f
             \if\pgf@nfold@next@visible1
               \edef\pgf@nfold@macrotoadd{%
@@ -318,7 +323,9 @@
     \def\pgf@nfold@shortenendjoin{0}
     \pgf@nfold@closejoinsedgecasefalse
     % Step 1.1: Make room for the join at the start if needed
-    \if\pgf@nfold@prev@visible1
+    \if\pgf@nfold@prev@visible0
+		  \pgf@nfold@continuesegmentfalse
+    \else
       \pgf@nfold@continuesegmenttrue
       % deltaphi@start can be recycled from deltaphi@end;
       % \ifpgf@nfold@angletoosharp is also still set
@@ -361,8 +368,6 @@
           \fi
         \fi
       \fi
-    \else
-      \pgf@nfold@continuesegmentfalse
     \fi
     % Step 1.2: Make room for the join at the end if needed
     \if\pgf@nfold@next@visible1
@@ -414,7 +419,7 @@
       \fi
       % Step 1.3: Detect an edge case
       % This edge case appears whenever the current segment is such a short line that we would
-      % have to reduce its length to less than zero to make space for the joins. In such cases,
+      % have to reduce its length to less than zero to make room for the joins. In such cases,
       % the line is not drawn at all, and slight modifications must be made to the joins to ensure
       % a correct output (i.e. one join is immediately followed by the next without a segment in between).
       %
@@ -460,7 +465,6 @@
     % Step 3: Draw the new segment.
     %
     % The value of \ifpgf@nfold@continuesegment decides whether we start with a moveto.
-    % curveto
     \if\pgf@nfold@cur@type l
       % In the edge case, one join is followed immediately by the next. The line segment
       % thus has a negative length and will be skipped.
@@ -777,51 +781,51 @@
 %
 % In order to correctly implement \pgfpathclose we already need to know about
 % the \pgfpathclose (and the penultimate point) at the beginning of this
-% connected segment as these data affect the first/last join.
-% We therefore parse one connected segment of the softpath and store it in a modified
-% form in \pgf@cur@conn@segment. When reaching the end of the connected segment we call
-% the proper parser to turn \pgf@cur@conn@segment into a parsed path. We do this for
-% all connected segments and concatenate all the parsed paths.
+% connected sub-path as these data affect the first/last join.
+% We therefore parse one connected sub-path of the softpath and store it in a modified
+% form in \pgf@cur@conn@subpath. When reaching the end of the connected sub-path we call
+% the proper parser to turn \pgf@cur@conn@subpath into a parsed path. We do this for
+% all connected sub-paths and concatenate all the parsed paths.
 %
 
 
 \def\pgf@nfold@parsesoftpath#1#2{%
-  \let\pgf@cur@conn@segment\pgfutil@empty%
-  \let\pgf@all@parsed@segments\pgfutil@empty%
+  \let\pgf@cur@conn@subpath\pgfutil@empty%
+  \let\pgf@all@parsed@subpaths\pgfutil@empty%
   \edef\pgf@nfold@parser@last@moveto{{\the\pgf@path@lastx}{\the\pgf@path@lasty}}%
   \let\pgf@nfold@last@closepath@from\pgfutil@empty%
   \pgf@nfold@parse@setupfirst%
   \expandafter\pgf@nfold@@parsesoftpath#1\pgf@stop{}{}%
-  \let#2\pgf@all@parsed@segments%
+  \let#2\pgf@all@parsed@subpaths%
 }%
 
 \def\pgf@nfold@@parsesoftpath#1#2#3{%
   \let\pgf@next\pgf@nfold@@parsesoftpath%
   \ifx#1\pgf@stop%
     \def\pgf@nfold@macrotoadd{\pgf@nfold@parselast}%
-    \pgf@nfold@addmacro\pgf@cur@conn@segment%
-    \pgf@nfold@lastconnsegmenttrue%
-    \pgf@nfold@process@conn@segment%
+    \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+    \pgf@nfold@lastconnsubpathtrue%
+    \pgf@nfold@process@conn@subpath%
     \let\pgf@next\relax%
   \else%
     \ifx#1\pgfsyssoftpath@movetotoken%
-      \ifx\pgf@cur@conn@segment\pgfutil@empty%
+      \ifx\pgf@cur@conn@subpath\pgfutil@empty%
         % This case happens for the very first segment or for double movetos.
         % We need special treatment here, as otherwise the arrow tip extension
         % does not work correctly. The \pgf@nfold@parsemoveto will be called
-        % in \pgf@nfold@process@conn@segment.
+        % in \pgf@nfold@process@conn@subpath.
         \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
-        % Make sure \pgf@cur@conn@segment is no longer empty so double movetos are not
+        % Make sure \pgf@cur@conn@subpath is no longer empty so double movetos are not
         % treated the same as single movetos. This is also relevant to arrow tip extensions
-        \def\pgf@cur@conn@segment{\relax}%
+        \def\pgf@cur@conn@subpath{\relax}%
       \else%
         \def\pgf@nfold@macrotoadd{\pgf@nfold@parsemoveto{#2}{#3}}%
-        \pgf@nfold@addmacro\pgf@cur@conn@segment%
-        \pgf@nfold@lastconnsegmentfalse%
-        % A moveto marks the beginning/end of one connected segment
-        \pgf@nfold@process@conn@segment%
+        \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+        \pgf@nfold@lastconnsubpathfalse%
+        % A moveto marks the beginning/end of one connected sub-path
+        \pgf@nfold@process@conn@subpath%
         \let\pgf@nfold@last@closepath@from\pgfutil@empty%
-        \let\pgf@cur@conn@segment\pgfutil@empty%
+        \let\pgf@cur@conn@subpath\pgfutil@empty%
         % set up "first" again which may be needed for the arrow tip extension
         \pgf@nfold@parse@setupfirst%
         \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
@@ -829,7 +833,7 @@
     \else%
       \ifx#1\pgfsyssoftpath@linetotoken%
         \def\pgf@nfold@macrotoadd{\pgf@nfold@parselineto{#2}{#3}}%
-        \pgf@nfold@addmacro\pgf@cur@conn@segment%
+        \pgf@nfold@addmacro\pgf@cur@conn@subpath%
       \else%
         \ifx#1\pgfsyssoftpath@curvetosupportatoken%
           \def\pgf@nfold@parse@supporta{{#2}{#3}}%
@@ -839,19 +843,19 @@
           \else%
             \ifx#1\pgfsyssoftpath@curvetotoken%
               \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@parsecurveto\pgf@nfold@parse@supporta\pgf@nfold@parse@supportb{#2}{#3}}%
-              \pgf@nfold@addmacro\pgf@cur@conn@segment%
+              \pgf@nfold@addmacro\pgf@cur@conn@subpath%
             \else%
               \ifx#1\pgfsyssoftpath@closepathtoken%
                 \let\pgf@nfold@last@closepath@from\pgf@nfold@parser@previous@pt%
                 \def\pgf@nfold@macrotoadd{\pgf@nfold@parseclosepath{#2}{#3}}%
-                \pgf@nfold@addmacro\pgf@cur@conn@segment%
+                \pgf@nfold@addmacro\pgf@cur@conn@subpath%
               \else%
                 \ifx#1\pgfsyssoftpath@rectcornertoken%
                   \def\pgf@nfold@parse@rectcorner{{#2}{#3}}%
                 \else%
                   \ifx#1\pgfsyssoftpath@rectsizetoken%
                     \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@parserect\pgf@nfold@parse@rectcorner{#2}{#3}}%
-                    \pgf@nfold@addmacro\pgf@cur@conn@segment%
+                    \pgf@nfold@addmacro\pgf@cur@conn@subpath%
                   \else%
                     \pgfutil@packageerror{tikz-nfold}{Unrecognised soft path token `#1'}{}%
                   \fi%
@@ -866,20 +870,20 @@
   \def\pgf@nfold@parser@previous@pt{{#2}{#3}}%
   \pgf@next}%
 
-\def\pgf@nfold@process@conn@segment{%
+\def\pgf@nfold@process@conn@subpath{%
   \let\pgf@parsed@cur@conn@seg\pgfutil@empty%
   \ifx\pgf@nfold@last@closepath@from\pgfutil@empty%
     \expandafter\pgf@nfold@parsemoveto\pgf@nfold@parser@last@moveto%
   \else%
-    % This connected segment ends on a closepath. In order to get
-    % the join right, we prepend the current segment with an invisible line
+    % This connected sub-path ends on a closepath. In order to get
+    % the join right, we prepend the current sub-path with an invisible line
     % identical to the line of the \pgfpathclose. This way, 
     \expandafter\pgf@nfold@parsemoveto\pgf@nfold@last@closepath@from%
     \expandafter\pgf@nfold@parseinvisibleline\pgf@nfold@parser@last@moveto%
   \fi%
-  \pgf@cur@conn@segment%
+  \pgf@cur@conn@subpath%
   \let\pgf@nfold@macrotoadd\pgf@parsed@cur@conn@seg%
-  \pgf@nfold@addmacro\pgf@all@parsed@segments%
+  \pgf@nfold@addmacro\pgf@all@parsed@subpaths%
 }
 
 %
