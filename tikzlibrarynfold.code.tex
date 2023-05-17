@@ -279,7 +279,7 @@
 
 
 \def\pgf@nfold@parser@handlesegment{%
-  \if\pgf@nfold@cur@visible 0
+  \if\pgf@nfold@cur@visible0
     % first, last and moveto are invisible
     \if\pgf@nfold@cur@type m
       % We don't need to do anything for a moveto: If a visible segment follows, it will move to
@@ -298,6 +298,8 @@
             \let\pgf@nfold@cur@visible 1
             \let\pgf@nfold@cur@angle@ii\pgf@nfold@next@angle@i
             \let\pgf@nfold@cur@tang@ii\pgf@nfold@next@tang@i
+            \def\pgf@nfold@deltaphi@end{0}
+            \pgf@nfold@angletoosharpfalse
           \fi
         \fi%
       \fi
@@ -311,25 +313,18 @@
     \def\pgf@nfold@shortenstartjoin{0}
     \def\pgf@nfold@shortenendjoin{0}
     \pgf@nfold@closejoinsedgecasefalse
-    \pgf@nfold@angletoosharpfalse
     % Step 1.1: Make room for the join at the start if needed
     \if\pgf@nfold@prev@visible1
       \pgf@nfold@continuesegmenttrue
-      % TODO can we just use deltaphi@end from the previous round?
-      % Compute the angle difference at the start (between -180 and +180 degrees)
-      % using \pgfmathsubtract@ is more readable and no less efficient than computing this manually
-      \pgfmathsubtract@{\pgf@nfold@cur@angle@i}{\pgf@nfold@prev@angle@ii}
-      \pgf@nfold@clampangle
-      \edef\pgf@nfold@deltaphi@start{\pgfmathresult}
+      % deltaphi@start can be recycled from deltaphi@end;
+      % \ifpgf@nfold@angletoosharp is also still set
+      \let\pgf@nfold@deltaphi@start\pgf@nfold@deltaphi@end
+      % set \pgf@xb := abs(deltaphi@start)
       \pgf@xb=\pgf@nfold@deltaphi@start pt\relax
       \ifdim\pgf@xb<0pt\relax
         \pgf@xb=-\pgf@xb
       \fi
-      \ifdim\pgf@xb>178pt\relax
-        % we go full backwards, don't relocate the start and disable the join to avoid division by zero
-        % don't need an error message here, it has already been displayed in the previous segment
-        \pgf@nfold@angletoosharptrue
-      \else
+      \ifpgf@nfold@angletoosharp\else
         \ifdim\pgf@xb>0.5pt\relax
           % make room for the start join if the angle is nonzero;
           % shortenstartjoin := hwidth*tan(.5*abs(deltaphi@start))
@@ -352,8 +347,7 @@
               \pgfmathveclen@{\pgfmathresult}{\pgf@sys@tonumber\pgf@yb}
               \pgfextract@process\pgf@nfold@cur@supporta{\pgfpointadd%
                 {\pgf@nfold@cur@first}%
-                % TODO migrate to tangent
-                {\pgfqpointpolar{\pgf@nfold@cur@angle@i}{\pgfmathresult pt}}}%
+                {\pgfqpointscale{\pgfmathresult}{\pgf@nfold@cur@tang@i}}}%
             \else
               % special treatment for singular curves (supporta = first) to avoid rounding error glitches.
               % In this special case, a slight corner at the end of the join is unavoidable unless we
@@ -381,6 +375,7 @@
         \pgfutil@packagewarning{tikz-nfold}{Angle too sharp, expect visual errors}
         \pgf@nfold@angletoosharptrue
       \else
+        \pgf@nfold@angletoosharpfalse
         \ifdim\pgf@xb>0.5pt\relax
            % make room for the start join if the angle is nonzero
           % shortenendjoin := hwidth*tan(.5*abs(deltaphi@end))
@@ -403,11 +398,10 @@
             \pgfmathveclen@{\pgf@sys@tonumber\pgf@x}{\pgf@sys@tonumber\pgf@y}
             \ifdim\pgfmathresult pt>0.1pt\relax
               \pgfmathveclen@{\pgfmathresult}{\pgf@sys@tonumber\pgf@yb}
-              % can use qpoint and minus because \pgfmathresult is guaranteed to be positive
               \pgfextract@process\pgf@nfold@cur@supportb{\pgfpointadd%
                 {\pgf@nfold@cur@last}%
-                % TODO migrate to tangent
-                {\pgfqpointpolar{\pgf@nfold@cur@angle@ii}{-\pgfmathresult pt}}}%
+                % can use qpointscale and a minus because \pgfmathresult is guaranteed to be positive
+                {\pgfqpointscale{-\pgfmathresult}{\pgf@nfold@cur@tang@ii}}}%
             \else
               \let\pgf@nfold@cur@supportb\pgf@nfold@cur@movedlast
             \fi
@@ -810,7 +804,7 @@
         % This case happens for the very first segment or for double movetos.
         % We need special treatment here, as otherwise the arrow tip extension
         % does not work correctly. The \pgf@nfold@parsemoveto will be called
-				% in \pgf@nfold@process@conn@segment.
+        % in \pgf@nfold@process@conn@segment.
         \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
         % Make sure \pgf@cur@conn@segment is no longer empty so double movetos are not
         % treated the same as single movetos. This is also relevant to arrow tip extensions
