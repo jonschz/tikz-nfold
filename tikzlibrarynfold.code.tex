@@ -276,6 +276,8 @@
 \newif\ifpgf@nfold@angletoosharp
 % This stores whether we need the intersections library for an arrow tip but it is not loaded
 \newif\ifpgf@nfold@intersectionsnotloaded
+% This stores whether the currently processed connected segment is the final one on this path
+\newif\ifpgf@nfold@lastconnsegment
 
 
 \def\pgf@nfold@parser@handlesegment{%
@@ -283,25 +285,27 @@
     % first, last and moveto are invisible
     \if\pgf@nfold@cur@type m
       % We don't need to do anything for a moveto: If a visible segment follows, it will move to
-      % its starting location by itself. However, we might need to draw the arrow tip extension 
+      % its starting location by itself. However, we might need to draw the arrow tip extension
       % at the start (if present).
       \if\pgf@nfold@start@arrowcode1
-        \if\pgf@nfold@prev@type f
-          \if\pgf@nfold@next@visible1
-            \edef\pgf@nfold@macrotoadd{%
-              \noexpand\pgf@nfold@extendtotip{s}{\pgf@nfold@cur@last}{\pgf@nfold@next@angle@i}
-            }%
-            \pgf@nfold@addmacro\pgf@parsed@cur@conn@seg%
-            % hack: We make the next segment believe that this segment was a lineto
-            % so the path does not get interrupted
-            \let\pgf@nfold@cur@type l
-            \let\pgf@nfold@cur@visible 1
-            \let\pgf@nfold@cur@angle@ii\pgf@nfold@next@angle@i
-            \let\pgf@nfold@cur@tang@ii\pgf@nfold@next@tang@i
-            \def\pgf@nfold@deltaphi@end{0}
-            \pgf@nfold@angletoosharpfalse
-          \fi
-        \fi%
+        \ifpgf@nfold@lastconnsegment
+          \if\pgf@nfold@prev@type f
+            \if\pgf@nfold@next@visible1
+              \edef\pgf@nfold@macrotoadd{%
+                \noexpand\pgf@nfold@extendtotip{s}{\pgf@nfold@cur@last}{\pgf@nfold@next@angle@i}
+              }%
+              \pgf@nfold@addmacro\pgf@parsed@cur@conn@seg%
+              % hack: We make the next segment believe that this segment was a lineto
+              % so the path does not get interrupted
+              \let\pgf@nfold@cur@type l
+              \let\pgf@nfold@cur@visible1
+              \let\pgf@nfold@cur@angle@ii\pgf@nfold@next@angle@i
+              \let\pgf@nfold@cur@tang@ii\pgf@nfold@next@tang@i
+              \def\pgf@nfold@deltaphi@end{0}
+              \pgf@nfold@angletoosharpfalse
+            \fi
+          \fi%
+        \fi
       \fi
     \fi%
   \else%
@@ -435,7 +439,7 @@
         % If the previous segment is a moveto and the current segment is a "close joins" edge case,
         % nothing needs to be drawn here (the relevant draw call will be made at the join of the subsequent
         % segment). We must therefore make sure that we move to the correct end point of this segment.
-        % Counterintuitively, this is given by the offset of \pgf@nfold@cur@movedfirst since the start and end
+        % Counterintuitively, this is given by the offset of \pgf@nfold@cur@movedFIRST since the start and end
         % are reversed in the edge case.
         \edef\pgf@nfold@macrotoadd{%
           \noexpand\pgf@nfold@token@edgecase@movetostart{\pgf@nfold@cur@movedfirst}{\pgf@nfold@cur@angle@i}%
@@ -796,6 +800,7 @@
   \ifx#1\pgf@stop%
     \def\pgf@nfold@macrotoadd{\pgf@nfold@parselast}%
     \pgf@nfold@addmacro\pgf@cur@conn@segment%
+    \pgf@nfold@lastconnsegmenttrue%
     \pgf@nfold@process@conn@segment%
     \let\pgf@next\relax%
   \else%
@@ -812,10 +817,13 @@
       \else%
         \def\pgf@nfold@macrotoadd{\pgf@nfold@parsemoveto{#2}{#3}}%
         \pgf@nfold@addmacro\pgf@cur@conn@segment%
+        \pgf@nfold@lastconnsegmentfalse%
         % A moveto marks the beginning/end of one connected segment
         \pgf@nfold@process@conn@segment%
         \let\pgf@nfold@last@closepath@from\pgfutil@empty%
         \let\pgf@cur@conn@segment\pgfutil@empty%
+        % set up "first" again which may be needed for the arrow tip extension
+        \pgf@nfold@parse@setupfirst%
         \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
       \fi
     \else%

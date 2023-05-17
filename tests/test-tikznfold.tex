@@ -199,6 +199,13 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
   \draw[draw=purple, opacity=.5, double distance=3pt, nfold=4, arrows=Implies-Implies] (2,0) to[out=90,in=90] (3,0);
 \end{tikzpicture}
 
+\subsection{Tip extension in non-connected path}
+\begin{tikzpicture}
+  \draw[draw=green,opacity=.5,double distance=3pt, arrows=Implies-Implies, save path=\tmppath]
+    (0,0) -- (1,0) (2,0) to[out=45,in=135] (3,0);
+  \draw[draw=purple, opacity=.5, double distance=3pt, nfold=4, arrows=Implies-Implies, use path=\tmppath];
+\end{tikzpicture}
+
 \subsection{More extreme paths}
 \begin{tikzpicture}
   \draw[draw=green,opacity=.5,double distance=3pt] (0,0) .. controls (5,.9) and (5,-.8) .. (0,0);
@@ -356,7 +363,11 @@ Both the larger discrepancy between the red line and the double path and the sli
   & c_2 
   \testarrow{dr,shift left=-1pt, out=30, in=180,"l", "m"'}{nfold}
   & c_3 \\
-  d_1 \testarrow{r, bend right, double distance=5pt, "a","b"'}{nfold=5} & d_2 & d_3
+% Test scaling nfold in tikzcd with its label relocation
+	d_1 \ar[r,Rightarrow,red,opacity=.8,bend right,
+          double distance=5.25pt, "a" inner sep=4.45pt, "b"' inner sep=4.45pt]
+      \ar[r,Rightarrow,opacity=.7,green!70!black,bend right,
+          double distance=1pt, scaling nfold=5, "a", "b"'] & d_2 & d_3
 \end{tikzcd}
 
 \subsection{Squiggly (issue \#4)}
