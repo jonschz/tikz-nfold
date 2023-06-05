@@ -287,11 +287,11 @@
       % We don't need to do anything for a moveto; if a visible segment follows, it will move to
       % its starting location by itself. However, we might need to draw the arrow tip extension
       % at the start (if present).
-			% Draw a tip extension only if all of the following conditions are met:
-			% 1. There is an Implies tip at the start of this path
-			% 2. We are currently on the last connected sub-path of this path
-			% 3. The next segment is visible
-			% 4. This moveto is the first segment on this path
+      % Draw a tip extension only if all of the following conditions are met:
+      % 1. There is an Implies tip at the start of this path
+      % 2. We are currently on the last connected sub-path of this path
+      % 3. The next segment is visible
+      % 4. This moveto is the first segment on this path
       \if\pgf@nfold@start@arrowcode1
         \ifpgf@nfold@lastconnsubpath
           \if\pgf@nfold@prev@type f
@@ -324,7 +324,7 @@
     \pgf@nfold@closejoinsedgecasefalse
     % Step 1.1: Make room for the join at the start if needed
     \if\pgf@nfold@prev@visible0
-		  \pgf@nfold@continuesegmentfalse
+      \pgf@nfold@continuesegmentfalse
     \else
       \pgf@nfold@continuesegmenttrue
       % deltaphi@start can be recycled from deltaphi@end;
@@ -375,6 +375,16 @@
       % using \pgfmathsubtract@ is more readable and no less efficient than computing this manually
       \pgfmathsubtract@{\pgf@nfold@next@angle@i}{\pgf@nfold@cur@angle@ii}
       \pgf@nfold@clampangle
+      % Edge case handling: If the next segment is a closepath and has length zero, deltaphi is set
+      % to zero to prevent glitches (a zero length segment has no well-defined angle anyway)
+			% TODO this might be replaced by code handling the more general case, see further TOOD comments below
+      \if\pgf@nfold@next@type o
+        \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@nfold@next@first}}%
+        \pgfpointtaxicabnorm\pgf@xa%
+        \ifdim\pgf@xa<0.1pt\relax
+          \def\pgfmathresult{0}
+        \fi
+      \fi
       \edef\pgf@nfold@deltaphi@end{\pgfmathresult}
       \pgf@xb=\pgf@nfold@deltaphi@end pt\relax
       \ifdim\pgf@xb<0pt\relax
@@ -877,7 +887,7 @@
   \else%
     % This connected sub-path ends on a closepath. In order to get
     % the join right, we prepend the current sub-path with an invisible line
-    % identical to the line of the \pgfpathclose. This way, 
+    % identical to the line of the \pgfpathclose.
     \expandafter\pgf@nfold@parsemoveto\pgf@nfold@last@closepath@from%
     \expandafter\pgf@nfold@parseinvisibleline\pgf@nfold@parser@last@moveto%
   \fi%
@@ -950,10 +960,18 @@
 
 \def\pgf@nfold@parseinvisibleline#1#2{%
   \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
-  % invisibleline segments should always be processed even if they have zero length.
+  \pgfpointtaxicabnorm\pgf@xa%
+  % In order to correctly render the start/end join in a closed path,
+	% the \pgfpathclose segment is copied to the start of the path as an invisible line.
   % Counterintuitively, an "invisibleline" segment has next@visible=1 because
   % we want its end join to be rendered.
-  \pgf@nfold@parse@line@common{#1}{#2}{i}%
+  \ifdim\pgf@xa>.1pt\relax%
+    \pgf@nfold@parse@line@common{#1}{#2}{i}%
+  \else%
+    % TODO fake a line with the same angle as the last segment. This requires a change in architecture
+    % because right now, the tangents are computed during processing, not parsing. However, in this case
+    % we need to know the tangents before processing.
+  \fi%
 }%
 
 \def\pgf@nfold@parselast{%
@@ -1053,14 +1071,17 @@
   \let\pgf@nfold@next@visible=0%
   \edef\pgf@nfold@next@last{\pgf@x\the\pgf@path@lastx\pgf@y\the\pgf@path@lasty}%
   % the following only need to be set if visible=1
-  \let\pgf@nfold@next@tang@i=\pgfpointorigin%
-  \let\pgf@nfold@next@tang@ii=\pgfpointorigin%
-  \def\pgf@nfold@next@angle@i{0}%
-  \def\pgf@nfold@next@angle@ii{0}%
-  \let\pgf@nfold@next@first\pgfpointorigin%
+  % TODO these are disabled temporarily; an attempt to read them suggests that there
+	% is a bug, because their content has no meaning at this point. Consider reenabling
+	% if compile errors show up, but if they do, the root of the problem is likely to be elsewhere
+  %\let\pgf@nfold@next@tang@i=\pgfpointorigin%
+  %\let\pgf@nfold@next@tang@ii=\pgfpointorigin%
+  % \def\pgf@nfold@next@angle@i{0}%
+  % \def\pgf@nfold@next@angle@ii{0}%
+  % \let\pgf@nfold@next@first\pgfpointorigin%
   % the following only need to be set if type=c
-  \let\pgf@nfold@next@supporta\pgfpointorigin%
-  \let\pgf@nfold@next@supportb\pgfpointorigin%
+  % \let\pgf@nfold@next@supporta\pgfpointorigin%
+  % \let\pgf@nfold@next@supportb\pgfpointorigin%
 }
 
 \def\pgf@nfold@clampangle{

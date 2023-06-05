@@ -269,6 +269,25 @@ This edge case needs special handling which is not implemented yet.\\
   \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
 \end{tikzpicture}
 
+\subsection{Closed paths with zero length final segment}
+
+\subsubsection{Zero angle (issue \#13)}
+% based on #13 reported by Qrrbrbirlbel
+
+\begin{tikzpicture}
+  \draw[draw=green,opacity=0.5, double distance=5pt, rounded corners=2mm, save path=\tmppath] (0,0) -- (0,1) -- (1,1) -- (1,0) -- cycle (2.5,.5) -- (2,0) -- (1.5,.5) -- (2,1) -- cycle;
+  \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
+\end{tikzpicture}
+
+
+\subsubsection{Non-zero angle (needs fix)}
+
+\begin{tikzpicture}
+  \draw[draw=green,opacity=0.5, double distance=5pt, save path=\tmppath]  (0,0) arc[start angle=270, end angle=360, radius=1cm] arc[start angle=90, end angle=180, radius=1cm] -- cycle;
+  \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
+\end{tikzpicture}
+
+
 \subsection{Key \texttt{/tikz/scaling nfold}}
 
 \begin{tikzpicture}
