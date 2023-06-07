@@ -371,20 +371,12 @@
     \fi
     % Step 1.2: Make room for the join at the end if needed
     \if\pgf@nfold@next@visible1
-      % Compute the angle difference at the start (between -180 and +180 degrees)
+      % Compute the angle difference at the end (between -180 and +180 degrees)
       % using \pgfmathsubtract@ is more readable and no less efficient than computing this manually
       \pgfmathsubtract@{\pgf@nfold@next@angle@i}{\pgf@nfold@cur@angle@ii}
       \pgf@nfold@clampangle
       % Edge case handling: If the next segment is a closepath and has length zero, deltaphi is set
       % to zero to prevent glitches (a zero length segment has no well-defined angle anyway)
-			% TODO this might be replaced by code handling the more general case, see further TOOD comments below
-      \if\pgf@nfold@next@type o
-        \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@nfold@next@first}}%
-        \pgfpointtaxicabnorm\pgf@xa%
-        \ifdim\pgf@xa<0.1pt\relax
-          \def\pgfmathresult{0}
-        \fi
-      \fi
       \edef\pgf@nfold@deltaphi@end{\pgfmathresult}
       \pgf@xb=\pgf@nfold@deltaphi@end pt\relax
       \ifdim\pgf@xb<0pt\relax
@@ -464,13 +456,23 @@
     \else
       % If we draw the join when the start angle is close to 180 degrees, we get a division by zero
       \ifpgf@nfold@angletoosharp\else
-        \pgf@nfold@parser@handlejoin
+        \if\pgf@nfold@cur@type z\else
+          \pgf@nfold@parser@handlejoin
+        \fi
       \fi
     \fi
-    % Step 2.2: Store where the current (non-offset) end point was relocated
+    % Step 2.2: Store information that may be needed later
+    % Step 2.2.1: Store where the current (non-offset) end point was relocated
     % in order to make space for the end join. This may be used if the next
     % segment begins with a join
     \let\pgf@nfold@prev@segment@end\pgf@nfold@cur@movedlast
+    % Step 2.2.2: Store the tangent of the first proper segment of closed path.
+    % This is needed in case the \pgfpathclose-segment has length zero,
+    % since in that case its tangent cannot be computed.
+    \if\pgf@nfold@cur@type i
+      \let\pgf@nfold@connsubpath@tang@i\pgf@nfold@next@tang@i%
+      \let\pgf@nfold@connsubpath@angle@i\pgf@nfold@next@angle@i%
+    \fi
     %
     % Step 3: Draw the new segment.
     %
@@ -490,6 +492,11 @@
       \fi
     \fi
     \if\pgf@nfold@cur@type o
+      \def\pgf@nfold@macrotoadd{\pgf@nfold@token@closepath}%
+      \pgf@nfold@addmacro\pgf@parsed@cur@conn@seg%
+    \fi
+    \if\pgf@nfold@cur@type z
+      % zero and non-zero closepath's differ in the join handling, but are identical in rendering
       \def\pgf@nfold@macrotoadd{\pgf@nfold@token@closepath}%
       \pgf@nfold@addmacro\pgf@parsed@cur@conn@seg%
     \fi
@@ -878,6 +885,9 @@
     \fi%
   \fi%
   \def\pgf@nfold@parser@previous@pt{{#2}{#3}}%
+  % store the last two segments, as they might be needed for zero-length \pgfpathclose-segments
+  \let\pgf@nfold@sectolast@segment\pgf@nfold@last@segment%
+  \let\pgf@nfold@last@segment\pgf@nfold@macrotoadd%
   \pgf@next}%
 
 \def\pgf@nfold@process@conn@subpath{%
@@ -898,7 +908,7 @@
 
 %
 % Values for \pgf@nfold@next@type:
-% f=first, m=moveto, c=curveto, l=lineto, r=rect, o=closepath, t=last, i=invisibleline
+% f=first, m=moveto, c=curveto, l=lineto, r=rect, o=closepath, z=zero length closepath, t=last, i=invisibleline
 %
 
 \def\pgf@nfold@parsemoveto#1#2{%
@@ -955,22 +965,56 @@
 \def\pgf@nfold@parseclosepath#1#2{%
   \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
   % closepath segments should always be processed even if they have zero length
-  \pgf@nfold@parse@line@common{#1}{#2}{o}%
+  \pgfpointtaxicabnorm\pgf@xa%
+  \ifdim\pgf@xa<0.1pt\relax%
+    \pgf@nfold@parse@closepath@zerolength{#1}{#2}%
+  \else%
+    \pgf@nfold@parse@line@common{#1}{#2}{o}%
+  \fi%
 }%
+
+\def\pgf@nfold@parse@closepath@zerolength#1#2{%
+  \pgf@nfold@parser@moveup%
+  \let\pgf@nfold@next@type=z%
+  \let\pgf@nfold@next@visible=1%
+  % Set the start and end tangent to the tangent of the first segment
+  \let\pgf@nfold@next@tang@i\pgf@nfold@connsubpath@tang@i
+  \let\pgf@nfold@next@tang@ii\pgf@nfold@connsubpath@tang@i
+  \let\pgf@nfold@next@angle@i\pgf@nfold@connsubpath@angle@i
+  \let\pgf@nfold@next@angle@ii\pgf@nfold@connsubpath@angle@i
+  \let\pgf@nfold@next@first\pgf@nfold@cur@last
+  % If problems arise, we need to put a fake point here (like \pgf@nfold@next@first + \pgf@nfold@next@tang@i)
+  \def\pgf@nfold@next@last{\pgf@x#1\pgf@y#2}%
+  \pgf@nfold@parser@handlesegment%
+}
 
 \def\pgf@nfold@parseinvisibleline#1#2{%
   \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
   \pgfpointtaxicabnorm\pgf@xa%
   % In order to correctly render the start/end join in a closed path,
-	% the \pgfpathclose segment is copied to the start of the path as an invisible line.
+  % the \pgfpathclose segment is copied to the start of the path as an invisible line.
   % Counterintuitively, an "invisibleline" segment has next@visible=1 because
   % we want its end join to be rendered.
+  % In case the \pgfpathclose segment has non-zero length, we can just use a copy of
+  % this segment for the invisible line. Otherwise, the invisble line segment must will receive
+  % the same angle/tangent as the last finite-sized segment, which is the second-to-last
+  % segment overall (cached in \pgf@nfold@sectolast@segment).
   \ifdim\pgf@xa>.1pt\relax%
     \pgf@nfold@parse@line@common{#1}{#2}{i}%
   \else%
-    % TODO fake a line with the same angle as the last segment. This requires a change in architecture
-    % because right now, the tangents are computed during processing, not parsing. However, in this case
-    % we need to know the tangents before processing.
+    \begingroup%
+      % find the tangent of the second-to-last segment
+      \let\pgf@nfold@parser@handlesegment\relax%
+      \pgf@nfold@sectolast@segment%
+      \global\let\pgf@nfold@tmp\pgf@nfold@next@tang@ii%
+    \endgroup%
+    % Construct an invisible line with length 1pt and the correct tangent.
+    % This step might not be needed since the join computations only require the tangent,
+    % but the invisibleline segment would be inconsistent otherwise, so better play it safe.
+    \pgfextract@process\pgf@nfold@next@first{\pgfpointdiff{\pgf@nfold@tmp}{\pgfqpoint{#1}{#2}}}%
+    % write the tangent into (\pgf@x, \pgf@y) where the next macro expects it to be
+    \pgf@nfold@tmp%
+    \pgf@nfold@parse@line@common{#1}{#2}{i}%
   \fi%
 }%
 
@@ -1072,8 +1116,8 @@
   \edef\pgf@nfold@next@last{\pgf@x\the\pgf@path@lastx\pgf@y\the\pgf@path@lasty}%
   % the following only need to be set if visible=1
   % TODO these are disabled temporarily; an attempt to read them suggests that there
-	% is a bug, because their content has no meaning at this point. Consider reenabling
-	% if compile errors show up, but if they do, the root of the problem is likely to be elsewhere
+  % is a bug, because their content has no meaning at this point. Consider reenabling
+  % if compile errors show up, but if they do, the root of the problem is likely to be elsewhere
   %\let\pgf@nfold@next@tang@i=\pgfpointorigin%
   %\let\pgf@nfold@next@tang@ii=\pgfpointorigin%
   % \def\pgf@nfold@next@angle@i{0}%
