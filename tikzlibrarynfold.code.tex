@@ -31,6 +31,20 @@
 % all this information in a "parsed path" macro. The structure of the parsed path resembles
 % the structure of a pgf softpath, but it consists of different tokens.
 %
+% Parsing is a two-step process: We iterate over the path in the first step and separate
+% it into connected sub-paths. This is necessary for closed paths, because we need to know
+% the location of the \pgfpathclose-segment in order to correctly offset the first segment
+% of this connected sub-path.
+%
+% Once we have parsed a connected sub-path and stored all the information necessary, the
+% second step, called _processing_, begins. This involves relocating start and end points
+% to make room for joins, storing all the information for a given join, subdividing curves,
+% and handling a number of edge cases.
+%
+% The resulting parsed and processed path (shortened to "parsed path") consists of tokens
+% like \pgf@nfold@token@lineto. Once a few macros are defined that control by how much
+% the curve should be offset, the parsed path can be invoked directly.
+%
 
 
 
@@ -186,9 +200,9 @@
 
 
 %
-% Parser: Join handler
+% Join handler
 %
-\def\pgf@nfold@parser@handlejoin{%
+\def\pgf@nfold@process@join{%
   % \pgf@xa := abs(deltaphi@start)
   \pgf@xa=\pgf@nfold@deltaphi@start pt\relax
   \ifdim\pgf@xa<0pt\relax
@@ -280,7 +294,7 @@
 \newif\ifpgf@nfold@lastconnsubpath
 
 
-\def\pgf@nfold@parser@handlesegment{%
+\def\pgf@nfold@process@segment{%
   \if\pgf@nfold@cur@visible0
     % first, last and moveto are invisible
     \if\pgf@nfold@cur@type m
@@ -457,7 +471,7 @@
       % If we draw the join when the start angle is close to 180 degrees, we get a division by zero
       \ifpgf@nfold@angletoosharp\else
         \if\pgf@nfold@cur@type z\else
-          \pgf@nfold@parser@handlejoin
+          \pgf@nfold@process@join
         \fi
       \fi
     \fi
@@ -811,7 +825,7 @@
   \let\pgf@all@parsed@subpaths\pgfutil@empty%
   \edef\pgf@nfold@parser@last@moveto{{\the\pgf@path@lastx}{\the\pgf@path@lasty}}%
   \let\pgf@nfold@last@closepath@from\pgfutil@empty%
-  \pgf@nfold@parse@setupfirst%
+  \pgf@nfold@parser@setupfirst%
   \expandafter\pgf@nfold@@parsesoftpath#1\pgf@stop{}{}%
   \let#2\pgf@all@parsed@subpaths%
 }%
@@ -819,7 +833,7 @@
 \def\pgf@nfold@@parsesoftpath#1#2#3{%
   \let\pgf@next\pgf@nfold@@parsesoftpath%
   \ifx#1\pgf@stop%
-    \def\pgf@nfold@macrotoadd{\pgf@nfold@parselast}%
+    \def\pgf@nfold@macrotoadd{\pgf@nfold@processlast}%
     \pgf@nfold@addmacro\pgf@cur@conn@subpath%
     \pgf@nfold@lastconnsubpathtrue%
     \pgf@nfold@process@conn@subpath%
@@ -829,14 +843,14 @@
       \ifx\pgf@cur@conn@subpath\pgfutil@empty%
         % This case happens for the very first segment or for double movetos.
         % We need special treatment here, as otherwise the arrow tip extension
-        % does not work correctly. The \pgf@nfold@parsemoveto will be called
+        % does not work correctly. The \pgf@nfold@processmoveto will be called
         % in \pgf@nfold@process@conn@subpath.
         \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
         % Make sure \pgf@cur@conn@subpath is no longer empty so double movetos are not
         % treated the same as single movetos. This is also relevant to arrow tip extensions
         \def\pgf@cur@conn@subpath{\relax}%
       \else%
-        \def\pgf@nfold@macrotoadd{\pgf@nfold@parsemoveto{#2}{#3}}%
+        \def\pgf@nfold@macrotoadd{\pgf@nfold@processmoveto{#2}{#3}}%
         \pgf@nfold@addmacro\pgf@cur@conn@subpath%
         \pgf@nfold@lastconnsubpathfalse%
         % A moveto marks the beginning/end of one connected sub-path
@@ -844,34 +858,34 @@
         \let\pgf@nfold@last@closepath@from\pgfutil@empty%
         \let\pgf@cur@conn@subpath\pgfutil@empty%
         % set up "first" again which may be needed for the arrow tip extension
-        \pgf@nfold@parse@setupfirst%
+        \pgf@nfold@parser@setupfirst%
         \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
       \fi
     \else%
       \ifx#1\pgfsyssoftpath@linetotoken%
-        \def\pgf@nfold@macrotoadd{\pgf@nfold@parselineto{#2}{#3}}%
+        \def\pgf@nfold@macrotoadd{\pgf@nfold@processlineto{#2}{#3}}%
         \pgf@nfold@addmacro\pgf@cur@conn@subpath%
       \else%
         \ifx#1\pgfsyssoftpath@curvetosupportatoken%
-          \def\pgf@nfold@parse@supporta{{#2}{#3}}%
+          \def\pgf@nfold@parser@supporta{{#2}{#3}}%
         \else%
           \ifx#1\pgfsyssoftpath@curvetosupportbtoken%
-            \def\pgf@nfold@parse@supportb{{#2}{#3}}%
+            \def\pgf@nfold@parser@supportb{{#2}{#3}}%
           \else%
             \ifx#1\pgfsyssoftpath@curvetotoken%
-              \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@parsecurveto\pgf@nfold@parse@supporta\pgf@nfold@parse@supportb{#2}{#3}}%
+              \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@processcurveto\pgf@nfold@parser@supporta\pgf@nfold@parser@supportb{#2}{#3}}%
               \pgf@nfold@addmacro\pgf@cur@conn@subpath%
             \else%
               \ifx#1\pgfsyssoftpath@closepathtoken%
                 \let\pgf@nfold@last@closepath@from\pgf@nfold@parser@previous@pt%
-                \def\pgf@nfold@macrotoadd{\pgf@nfold@parseclosepath{#2}{#3}}%
+                \def\pgf@nfold@macrotoadd{\pgf@nfold@processclosepath{#2}{#3}}%
                 \pgf@nfold@addmacro\pgf@cur@conn@subpath%
               \else%
                 \ifx#1\pgfsyssoftpath@rectcornertoken%
-                  \def\pgf@nfold@parse@rectcorner{{#2}{#3}}%
+                  \def\pgf@nfold@parser@rectcorner{{#2}{#3}}%
                 \else%
                   \ifx#1\pgfsyssoftpath@rectsizetoken%
-                    \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@parserect\pgf@nfold@parse@rectcorner{#2}{#3}}%
+                    \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@processrect\pgf@nfold@parser@rectcorner{#2}{#3}}%
                     \pgf@nfold@addmacro\pgf@cur@conn@subpath%
                   \else%
                     \pgfutil@packageerror{tikz-nfold}{Unrecognised soft path token `#1'}{}%
@@ -893,13 +907,13 @@
 \def\pgf@nfold@process@conn@subpath{%
   \let\pgf@parsed@cur@conn@seg\pgfutil@empty%
   \ifx\pgf@nfold@last@closepath@from\pgfutil@empty%
-    \expandafter\pgf@nfold@parsemoveto\pgf@nfold@parser@last@moveto%
+    \expandafter\pgf@nfold@processmoveto\pgf@nfold@parser@last@moveto%
   \else%
     % This connected sub-path ends on a closepath. In order to get
     % the join right, we prepend the current sub-path with an invisible line
     % identical to the line of the \pgfpathclose.
-    \expandafter\pgf@nfold@parsemoveto\pgf@nfold@last@closepath@from%
-    \expandafter\pgf@nfold@parseinvisibleline\pgf@nfold@parser@last@moveto%
+    \expandafter\pgf@nfold@processmoveto\pgf@nfold@last@closepath@from%
+    \expandafter\pgf@nfold@processinvisibleline\pgf@nfold@parser@last@moveto%
   \fi%
   \pgf@cur@conn@subpath%
   \let\pgf@nfold@macrotoadd\pgf@parsed@cur@conn@seg%
@@ -911,18 +925,18 @@
 % f=first, m=moveto, c=curveto, l=lineto, r=rect, o=closepath, z=zero length closepath, t=last, i=invisibleline
 %
 
-\def\pgf@nfold@parsemoveto#1#2{%
-  \pgf@nfold@parser@moveup%
+\def\pgf@nfold@processmoveto#1#2{%
+  \pgf@nfold@process@moveup%
   \let\pgf@nfold@next@type=m%
   \let\pgf@nfold@next@visible=0%
   \edef\pgf@nfold@next@last{\pgf@x#1\pgf@y#2}%
-  \pgf@nfold@parser@handlesegment%
+  \pgf@nfold@process@segment%
 }%
 
 
-% Common code for parselineto and parseclosepath
-\def\pgf@nfold@parse@line@common#1#2#3{%
-  \pgf@nfold@parser@moveup%
+% Common code for processlineto and processclosepath
+\def\pgf@nfold@process@line@common#1#2#3{%
+  \pgf@nfold@process@moveup%
   \pgfextract@process\pgf@tmp@tang@i{\pgfpointnormalised{}\global\let\pgf@nfold@tmp\pgf@tmp}
   \let\pgf@nfold@next@type=#3%
   \let\pgf@nfold@next@visible=1%
@@ -932,21 +946,21 @@
   \let\pgf@nfold@next@angle@ii\pgf@nfold@tmp
   \let\pgf@nfold@next@first\pgf@nfold@cur@last
   \def\pgf@nfold@next@last{\pgf@x#1\pgf@y#2}%
-  \pgf@nfold@parser@handlesegment%
+  \pgf@nfold@process@segment%
 }
 
-\def\pgf@nfold@parselineto#1#2{%
-  % the current end is still stored in next@last because parser@moveup has not been called yet
+\def\pgf@nfold@processlineto#1#2{%
+  % the current end is still stored in next@last because process@moveup has not been called yet
   \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
   \pgfpointtaxicabnorm\pgf@xa%
   % remove degenerate line segments (reduces glitches)
   \ifdim\pgf@xa>.1pt\relax%
-    \pgf@nfold@parse@line@common{#1}{#2}{l}%
+    \pgf@nfold@process@line@common{#1}{#2}{l}%
   \fi%
 }%
 
-\def\pgf@nfold@parsecurveto#1#2#3#4#5#6{%
-  \pgf@nfold@parser@moveup%
+\def\pgf@nfold@processcurveto#1#2#3#4#5#6{%
+  \pgf@nfold@process@moveup%
   \pgf@offset@compute@tangents{\pgf@nfold@cur@last}{\pgf@x#1\pgf@y#2}{\pgf@x#3\pgf@y#4}{\pgf@x#5\pgf@y#6}%
   \let\pgf@nfold@next@type=c%
   \let\pgf@nfold@next@visible=1%
@@ -959,22 +973,22 @@
   \def\pgf@nfold@next@supporta{\pgf@x#1\pgf@y#2}
   \def\pgf@nfold@next@supportb{\pgf@x#3\pgf@y#4}
   \def\pgf@nfold@next@last{\pgf@x#5\pgf@y#6}
-  \pgf@nfold@parser@handlesegment%
+  \pgf@nfold@process@segment%
 }%
 
-\def\pgf@nfold@parseclosepath#1#2{%
+\def\pgf@nfold@processclosepath#1#2{%
   \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
   % closepath segments should always be processed even if they have zero length
   \pgfpointtaxicabnorm\pgf@xa%
   \ifdim\pgf@xa<0.1pt\relax%
-    \pgf@nfold@parse@closepath@zerolength{#1}{#2}%
+    \pgf@nfold@process@closepath@zerolength{#1}{#2}%
   \else%
-    \pgf@nfold@parse@line@common{#1}{#2}{o}%
+    \pgf@nfold@process@line@common{#1}{#2}{o}%
   \fi%
 }%
 
-\def\pgf@nfold@parse@closepath@zerolength#1#2{%
-  \pgf@nfold@parser@moveup%
+\def\pgf@nfold@process@closepath@zerolength#1#2{%
+  \pgf@nfold@process@moveup%
   \let\pgf@nfold@next@type=z%
   \let\pgf@nfold@next@visible=1%
   % Set the start and end tangent to the tangent of the first segment
@@ -985,10 +999,10 @@
   \let\pgf@nfold@next@first\pgf@nfold@cur@last
   % If problems arise, we need to put a fake point here (like \pgf@nfold@next@first + \pgf@nfold@next@tang@i)
   \def\pgf@nfold@next@last{\pgf@x#1\pgf@y#2}%
-  \pgf@nfold@parser@handlesegment%
+  \pgf@nfold@process@segment%
 }
 
-\def\pgf@nfold@parseinvisibleline#1#2{%
+\def\pgf@nfold@processinvisibleline#1#2{%
   \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
   \pgfpointtaxicabnorm\pgf@xa%
   % In order to correctly render the start/end join in a closed path,
@@ -1000,11 +1014,11 @@
   % the same angle/tangent as the last finite-sized segment, which is the second-to-last
   % segment overall (cached in \pgf@nfold@sectolast@segment).
   \ifdim\pgf@xa>.1pt\relax%
-    \pgf@nfold@parse@line@common{#1}{#2}{i}%
+    \pgf@nfold@process@line@common{#1}{#2}{i}%
   \else%
     \begingroup%
       % find the tangent of the second-to-last segment
-      \let\pgf@nfold@parser@handlesegment\relax%
+      \let\pgf@nfold@process@segment\relax%
       \pgf@nfold@sectolast@segment%
       \global\let\pgf@nfold@tmp\pgf@nfold@next@tang@ii%
     \endgroup%
@@ -1014,37 +1028,37 @@
     \pgfextract@process\pgf@nfold@next@first{\pgfpointdiff{\pgf@nfold@tmp}{\pgfqpoint{#1}{#2}}}%
     % write the tangent into (\pgf@x, \pgf@y) where the next macro expects it to be
     \pgf@nfold@tmp%
-    \pgf@nfold@parse@line@common{#1}{#2}{i}%
+    \pgf@nfold@process@line@common{#1}{#2}{i}%
   \fi%
 }%
 
-\def\pgf@nfold@parselast{%
-  \pgf@nfold@parser@moveup%
+\def\pgf@nfold@processlast{%
+  \pgf@nfold@process@moveup%
   \let\pgf@nfold@next@type=t%
   \let\pgf@nfold@next@visible=0%
-  \pgf@nfold@parser@handlesegment%
+  \pgf@nfold@process@segment%
 }
 
 % Mostly for the sake of completeness; using TikZ' "\path (0,0) rectangle (1,1);" does not call this code
-\def\pgf@nfold@parserect#1#2#3#4{%
-  \pgf@nfold@parsemoveto{#1}{#2}%
+\def\pgf@nfold@processrect#1#2#3#4{%
+  \pgf@nfold@processmoveto{#1}{#2}%
   \pgf@xc=#1\relax
   \pgf@yc=#2\relax
   \pgf@xd=#3\relax
   \pgf@yd=#4\relax
   \advance\pgf@yc\pgf@yd%
   \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
-  \expandafter\pgf@nfold@parselineto\pgf@temp%
+  \expandafter\pgf@nfold@processlineto\pgf@temp%
   \advance\pgf@xc\pgf@xd%
   \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
-  \expandafter\pgf@nfold@parselineto\pgf@temp%
+  \expandafter\pgf@nfold@processlineto\pgf@temp%
   \advance\pgf@yc-\pgf@yd%
   \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
-  \expandafter\pgf@nfold@parselineto\pgf@temp%
+  \expandafter\pgf@nfold@processlineto\pgf@temp%
   \advance\pgf@xc-\pgf@xd%
   \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
-  \expandafter\pgf@nfold@parselineto\pgf@temp%
-  \edef\pgf@marshal{\noexpand\pgf@nfold@parsemoveto{\the\pgf@xc}{\the\pgf@yc}}%
+  \expandafter\pgf@nfold@processlineto\pgf@temp%
+  \edef\pgf@marshal{\noexpand\pgf@nfold@processmoveto{\the\pgf@xc}{\the\pgf@yc}}%
   \pgf@marshal%
 }
 
@@ -1059,7 +1073,7 @@
 
 
 %
-% Tokens for the parsed path
+% Tokens for the parsed and processed path
 %
 
 %#3: cached normalised tangent (for efficiency)
@@ -1109,23 +1123,13 @@
 }
 
 
-\def\pgf@nfold@parse@setupfirst{%
+\def\pgf@nfold@parser@setupfirst{%
   \let\pgf@nfold@next@type=f%
   % technically, @visible can be derived from @type, but I think this is more efficient
   \let\pgf@nfold@next@visible=0%
   \edef\pgf@nfold@next@last{\pgf@x\the\pgf@path@lastx\pgf@y\the\pgf@path@lasty}%
-  % the following only need to be set if visible=1
-  % TODO these are disabled temporarily; an attempt to read them suggests that there
-  % is a bug, because their content has no meaning at this point. Consider reenabling
-  % if compile errors show up, but if they do, the root of the problem is likely to be elsewhere
-  %\let\pgf@nfold@next@tang@i=\pgfpointorigin%
-  %\let\pgf@nfold@next@tang@ii=\pgfpointorigin%
-  % \def\pgf@nfold@next@angle@i{0}%
-  % \def\pgf@nfold@next@angle@ii{0}%
-  % \let\pgf@nfold@next@first\pgfpointorigin%
-  % the following only need to be set if type=c
-  % \let\pgf@nfold@next@supporta\pgfpointorigin%
-  % \let\pgf@nfold@next@supportb\pgfpointorigin%
+  % We do not set any of the other macros like \pgf@nfold@next@tang@i or \pgf@nfold@next@first;
+  % any attempt to read them implies that there is a bug elsewhere, so crashing is desired.
 }
 
 \def\pgf@nfold@clampangle{
@@ -1144,7 +1148,7 @@
 
 
 
-\def\pgf@nfold@parser@moveup{%
+\def\pgf@nfold@process@moveup{%
   \let\pgf@nfold@prev@type\pgf@nfold@cur@type%
   \let\pgf@nfold@prev@visible\pgf@nfold@cur@visible%
   \let\pgf@nfold@prev@tang@i\pgf@nfold@cur@tang@i%
@@ -1167,9 +1171,10 @@
   \let\pgf@nfold@cur@last\pgf@nfold@next@last%
 }
 
+
 %
-% Iterating over the parsed soft path
-% -----------------------------------
+% Iterating over the parsed and processed soft path
+% -------------------------------------------------
 %
 
 \newcount\pgf@nfold@index
