@@ -136,7 +136,7 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
   \begin{tikzpicture}
     \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0.01);
   \end{tikzpicture}\\
-  Expectation: Finite-sized output, pgf warning ``angle too sharp''\\[.5em]
+  Expect.: Warning ``Angle too sharp, expect visual errors''; finite-size output \\[.5em]
   Actual warning: \errormsg
 
   \subsubsection{Exactly 180 degree turn}
@@ -144,7 +144,7 @@ Here the nfold preparation code must be injected into \verb|\pgf@path@check@prop
   \begin{tikzpicture}
     \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0);
   \end{tikzpicture}\\
-  Expectation: Finite-sized output, pgf warning ``angle too sharp''\\[.5em]
+  Expect.: Warning ``Angle too sharp, expect visual errors''; finite-size output \\[.5em]
   Actual warning: \errormsg
 }
 

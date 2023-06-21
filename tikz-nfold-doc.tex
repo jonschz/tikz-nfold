@@ -209,6 +209,19 @@ This package is by no means perfect, and even if it were, there would still be s
 
 \subsection{Impossible or very hard to fix}
 \begin{itemize}
+  \item Self-intersecting paths do not have the expected intersections:
+\begin{tkzexample}[latex=4.5cm]
+\begin{tikzpicture}
+  \draw[double distance=5pt, line width=1pt]
+    (0,2.5) -- (1,2.5) (1,3) -- (1,2)
+    (2,2) -- (3,2) rectangle (4,3);
+  \node[right] at (0,3.5) {double:};
+  \draw[double distance=5pt, line width=1pt, nfold]
+    (0,.5) -- (1,.5) (1,1) -- (1,0)
+    (2,0) -- (3,0) rectangle (4,1);
+  \node[right] at (0,1.5) {nfold:};
+\end{tikzpicture}
+\end{tkzexample}
   \item \nfold{} struggles with high curvatures and wide paths: Let $\kappa(t)$ be the curvature of the path in a given point, and let $\texttt{double distance} = \alpha$. If $\kappa(t) > \frac{2}{\alpha}$ (i.e. the radius of the osculating circle is smaller than half the width of the path) for some $0 \leq t \leq 1$, the output of \nfold{} will not be correct:
 \begin{tkzexample}[latex=4.25cm]
 \begin{tikzpicture}
