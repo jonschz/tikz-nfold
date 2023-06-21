@@ -802,23 +802,91 @@
 % Parsing the soft path
 % ---------------------
 %
-% A significant part of the code below is based on pgfmoduledecorations.code.tex (c) 2019 Mark Wibrow and Till Tantau.
+% Part of the code below is based on pgfmoduledecorations.code.tex (c) 2019 Mark Wibrow and Till Tantau.
 % Quite similar to decorations we parse the current soft path and put it into a form that makes it easier
 % to iterate over.
 %
-%
 
+% The parsing macros below add \pgf@nfold@process@...-macros to \pgf@cur@conn@subpath.
+% Once a connected sub-path is parsed, calling \pgf@cur@conn@subpath triggers processing.
+
+\def\pgf@nfold@parsemoveto#1#2{%
+  \ifx\pgf@cur@conn@subpath\pgfutil@empty%
+    % This case happens for the very first segment or for double movetos.
+    % We need special treatment here, as otherwise the arrow tip extension
+    % does not work correctly. The \pgf@nfold@processmoveto will be called
+    % in \pgf@nfold@process@conn@subpath.
+    \def\pgf@nfold@parser@last@moveto{{#1}{#2}}%
+    % Make sure \pgf@cur@conn@subpath is no longer empty so double movetos are not
+    % treated the same as single movetos. This is also relevant to arrow tip extensions
+    \def\pgf@cur@conn@subpath{\relax}%
+  \else%
+    \def\pgf@nfold@macrotoadd{\pgf@nfold@processmoveto{#1}{#2}}%
+    \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+    \pgf@nfold@lastconnsubpathfalse%
+    % A moveto marks the beginning/end of one connected sub-path
+    \pgf@nfold@process@conn@subpath%
+    \let\pgf@nfold@last@closepath@from\pgfutil@empty%
+    \let\pgf@cur@conn@subpath\pgfutil@empty%
+    % set up "first" again which may be needed for the arrow tip extension
+    \pgf@nfold@parser@setupfirst%
+    \def\pgf@nfold@parser@last@moveto{{#1}{#2}}%
+  \fi%
+  \pgf@nfold@parsesoftpath@finish{#1}{#2}%
+}
+
+\def\pgf@nfold@parselineto#1#2{%
+  \def\pgf@nfold@macrotoadd{\pgf@nfold@processlineto{#1}{#2}}%
+  \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+  \pgf@nfold@parsesoftpath@finish{#1}{#2}%
+}
+
+\def\pgf@nfold@parseclosepath#1#2{%
+  \let\pgf@nfold@last@closepath@from\pgf@nfold@parser@previous@pt%
+  \def\pgf@nfold@macrotoadd{\pgf@nfold@processclosepath{#1}{#2}}%
+  \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+  \pgf@nfold@parsesoftpath@finish{#1}{#2}%
+}
+
+\def\pgf@nfold@parsecurveto#1#2{%
+  \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@processcurveto\pgf@nfold@parser@supporta\pgf@nfold@parser@supportb{#1}{#2}}%
+  \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+  \pgf@nfold@parsesoftpath@finish{#1}{#2}%
+}
+
+% Mostly for the sake of completeness; using TikZ' "\path (0,0) rectangle (1,1);" does not call this code
+\def\pgf@nfold@parserect#1#2#3#4{%
+  \pgf@nfold@parsemoveto{#1}{#2}%
+  \pgf@xc=#1\relax
+  \pgf@yc=#2\relax
+  \pgf@xd=#3\relax
+  \pgf@yd=#4\relax
+  \advance\pgf@yc\pgf@yd%
+  \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
+  \expandafter\pgf@nfold@parselineto\pgf@temp%
+  \advance\pgf@xc\pgf@xd%
+  \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
+  \expandafter\pgf@nfold@parselineto\pgf@temp%
+  \advance\pgf@yc-\pgf@yd%
+  \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
+  \expandafter\pgf@nfold@parselineto\pgf@temp%
+  \advance\pgf@xc-\pgf@xd%
+  \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
+  % TODO change here, push in separate commit
+%  \expandafter\pgf@nfold@parselineto\pgf@temp%
+  \expandafter\pgf@nfold@parseclosepath\pgf@temp%
+  \pgf@nfold@parsemoveto{#1}{#2}%
+}
 
 %
 % In order to correctly implement \pgfpathclose we already need to know about
 % the \pgfpathclose (and the penultimate point) at the beginning of this
-% connected sub-path as these data affect the first/last join.
+% connected sub-path, as these data affect the first/last join.
 % We therefore parse one connected sub-path of the softpath and store it in a modified
-% form in \pgf@cur@conn@subpath. When reaching the end of the connected sub-path we call
-% the proper parser to turn \pgf@cur@conn@subpath into a parsed path. We do this for
+% form in \pgf@cur@conn@subpath. When reaching the end of the connected sub-path we commence
+% the processing to turn \pgf@cur@conn@subpath into a parsed path. We do this for
 % all connected sub-paths and concatenate all the parsed paths.
 %
-
 
 \def\pgf@nfold@parsesoftpath#1#2{%
   \let\pgf@cur@conn@subpath\pgfutil@empty%
@@ -840,31 +908,10 @@
     \let\pgf@next\relax%
   \else%
     \ifx#1\pgfsyssoftpath@movetotoken%
-      \ifx\pgf@cur@conn@subpath\pgfutil@empty%
-        % This case happens for the very first segment or for double movetos.
-        % We need special treatment here, as otherwise the arrow tip extension
-        % does not work correctly. The \pgf@nfold@processmoveto will be called
-        % in \pgf@nfold@process@conn@subpath.
-        \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
-        % Make sure \pgf@cur@conn@subpath is no longer empty so double movetos are not
-        % treated the same as single movetos. This is also relevant to arrow tip extensions
-        \def\pgf@cur@conn@subpath{\relax}%
-      \else%
-        \def\pgf@nfold@macrotoadd{\pgf@nfold@processmoveto{#2}{#3}}%
-        \pgf@nfold@addmacro\pgf@cur@conn@subpath%
-        \pgf@nfold@lastconnsubpathfalse%
-        % A moveto marks the beginning/end of one connected sub-path
-        \pgf@nfold@process@conn@subpath%
-        \let\pgf@nfold@last@closepath@from\pgfutil@empty%
-        \let\pgf@cur@conn@subpath\pgfutil@empty%
-        % set up "first" again which may be needed for the arrow tip extension
-        \pgf@nfold@parser@setupfirst%
-        \def\pgf@nfold@parser@last@moveto{{#2}{#3}}%
-      \fi
+      \pgf@nfold@parsemoveto{#2}{#3}%
     \else%
       \ifx#1\pgfsyssoftpath@linetotoken%
-        \def\pgf@nfold@macrotoadd{\pgf@nfold@processlineto{#2}{#3}}%
-        \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+        \pgf@nfold@parselineto{#2}{#3}%
       \else%
         \ifx#1\pgfsyssoftpath@curvetosupportatoken%
           \def\pgf@nfold@parser@supporta{{#2}{#3}}%
@@ -873,20 +920,16 @@
             \def\pgf@nfold@parser@supportb{{#2}{#3}}%
           \else%
             \ifx#1\pgfsyssoftpath@curvetotoken%
-              \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@processcurveto\pgf@nfold@parser@supporta\pgf@nfold@parser@supportb{#2}{#3}}%
-              \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+              \pgf@nfold@parsecurveto{#2}{#3}%
             \else%
               \ifx#1\pgfsyssoftpath@closepathtoken%
-                \let\pgf@nfold@last@closepath@from\pgf@nfold@parser@previous@pt%
-                \def\pgf@nfold@macrotoadd{\pgf@nfold@processclosepath{#2}{#3}}%
-                \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+                \pgf@nfold@parseclosepath{#2}{#3}%
               \else%
                 \ifx#1\pgfsyssoftpath@rectcornertoken%
                   \def\pgf@nfold@parser@rectcorner{{#2}{#3}}%
                 \else%
                   \ifx#1\pgfsyssoftpath@rectsizetoken%
-                    \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@processrect\pgf@nfold@parser@rectcorner{#2}{#3}}%
-                    \pgf@nfold@addmacro\pgf@cur@conn@subpath%
+                    \expandafter\pgf@nfold@parserect\pgf@nfold@parser@rectcorner{#2}{#3}%
                   \else%
                     \pgfutil@packageerror{tikz-nfold}{Unrecognised soft path token `#1'}{}%
                   \fi%
@@ -898,11 +941,17 @@
       \fi%
     \fi%
   \fi%
-  \def\pgf@nfold@parser@previous@pt{{#2}{#3}}%
+  % We call \pgf@nfold@parsesoftpath@finish in all parsing macros instead of here because
+  % \pgf@nfold@parserect calls other parsing macros internally
+  \pgf@next%
+}%
+
+\def\pgf@nfold@parsesoftpath@finish#1#2{%
+  \def\pgf@nfold@parser@previous@pt{{#1}{#2}}%
   % store the last two segments, as they might be needed for zero-length \pgfpathclose-segments
   \let\pgf@nfold@sectolast@segment\pgf@nfold@last@segment%
   \let\pgf@nfold@last@segment\pgf@nfold@macrotoadd%
-  \pgf@next}%
+}
 
 \def\pgf@nfold@process@conn@subpath{%
   \let\pgf@parsed@cur@conn@seg\pgfutil@empty%
@@ -1037,29 +1086,6 @@
   \let\pgf@nfold@next@type=t%
   \let\pgf@nfold@next@visible=0%
   \pgf@nfold@process@segment%
-}
-
-% Mostly for the sake of completeness; using TikZ' "\path (0,0) rectangle (1,1);" does not call this code
-\def\pgf@nfold@processrect#1#2#3#4{%
-  \pgf@nfold@processmoveto{#1}{#2}%
-  \pgf@xc=#1\relax
-  \pgf@yc=#2\relax
-  \pgf@xd=#3\relax
-  \pgf@yd=#4\relax
-  \advance\pgf@yc\pgf@yd%
-  \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
-  \expandafter\pgf@nfold@processlineto\pgf@temp%
-  \advance\pgf@xc\pgf@xd%
-  \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
-  \expandafter\pgf@nfold@processlineto\pgf@temp%
-  \advance\pgf@yc-\pgf@yd%
-  \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
-  \expandafter\pgf@nfold@processlineto\pgf@temp%
-  \advance\pgf@xc-\pgf@xd%
-  \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
-  \expandafter\pgf@nfold@processlineto\pgf@temp%
-  \edef\pgf@marshal{\noexpand\pgf@nfold@processmoveto{\the\pgf@xc}{\the\pgf@yc}}%
-  \pgf@marshal%
 }
 
 % adds the contents of \pgf@nfold@macrotoadd to #1
