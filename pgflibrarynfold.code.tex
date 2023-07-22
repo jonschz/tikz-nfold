@@ -1,0 +1,100 @@
+%% pgflibrarynfold.code.tex
+%% Copyright 2023 Jonathan Schulz
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3c
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+% http://www.latex-project.org/lppl.txt
+% and version 1.3c or later is part of all distributions of LaTeX
+% version 2008-05-04 or later.
+%
+% This work has the LPPL maintenance status 'maintained'.
+%
+% The Current Maintainer of this work is Jonathan Schulz.
+%
+% This work consists of the files pgflibrarybezieroffset.code.tex,
+% tikzlibrarynfold.code.tex, tikz-nfold-doc.tex, and tikz-nfold-doc.pdf.
+
+
+\usepgflibrary{offsetpath}
+
+%
+% Iterating over the parsed and processed soft path
+% -------------------------------------------------
+%
+
+\newcount\pgf@nfold@index
+\def\pgf@nfold@run@loop{%
+  \pgf@nfold@index=\pgf@nfold@order%
+  \pgf@nfold@run@loop@%
+}
+
+\def\pgf@nfold@run@loop@{%
+  \pgf@nfold@loop@inner%
+  \advance\pgf@nfold@index by -1\relax
+  \ifnum\pgf@nfold@index>0\relax%
+    \pgf@nfold@run@loop@%
+  \fi%
+}
+
+\def\pgf@nfold@loop@inner{%
+  \pgfmathsetmacro{\pgf@nfold@shift@fraction}%
+    {-1+2*(\pgf@nfold@index-1)/(\pgf@nfold@order-1)}%
+  % Do not store shiftamount as a length (i.e. with pt) because we want to use it in \pgfqpointscale{}{}
+  \pgfmathsetmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@nfold@shift@fraction}
+  % Transformations are already baked into the path; without this call, they would be applied twice
+  \pgftransformreset%
+  \parsedpath%
+  \pgfsyssoftpath@flushcurrentpath%
+  \pgf@up@action%
+}
+
+% Computes both the width of the component lines into \pgf@x and the distance
+% from the center to the outermost line centers into \pgf@y
+% from the current values of \pgflinewidth and \pgfinnerlinewidth.
+\def\pgf@nfold@compute@widths@from@double{
+    \pgf@x=\pgflinewidth\relax%
+    \pgf@y=\pgf@x\relax%
+    \advance\pgf@x-\pgfinnerlinewidth\relax%
+    \advance\pgf@y+\pgfinnerlinewidth\relax%
+    \pgf@x=.5\pgf@x\relax%
+    \pgf@y=.25\pgf@y\relax%
+}
+
+\def\pgf@nfold@render@cached@softpath{%
+  \pgfscope% must use a scope, otherwise we break the arrow tips
+    % Compute the full and constituent part line widths
+    \pgf@nfold@compute@widths@from@double%
+    \pgfsetlinewidth\pgf@x%
+    \edef\pgf@nfold@hwidth{\the\pgf@y}%
+    \pgfprocessround{\pgf@nfold@cachedpath}{\pgf@nfold@cachedpath}% remove tokens from the soft path
+    \pgf@nfold@parsearrows%
+    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\parsedpath}%
+    \pgf@nfold@run@loop%
+  \endpgfscope%
+}
+
+%
+% pgf keys
+% --------
+%
+
+\pgfkeys{
+  /pgf/nfold/.code={%
+    \pgf@nfold@order=#1\relax%
+    \ifnum\pgf@nfold@order<1\relax%
+      \pgfutil@packageerror{tikz-nfold}{The key /pgf/nfold must take a value of at least 1, got \the\pgf@nfold@order}{}%
+    \fi%
+    % If nfold > numcached AND intersections is not loaded AND we draw an Implies tip, we get an error.
+    % We check the first two conditions now and set the respective flag
+    \ifnum\pgf@nfold@order>\pgf@nfold@intersec@numcached\relax
+      \ifdefined\pgfintersectionofpaths\else
+        \pgf@nfold@intersectionsnotloadedtrue
+      \fi
+    \fi
+  },
+  /pgf/nfold/.default=2
+}
+
+\endinput

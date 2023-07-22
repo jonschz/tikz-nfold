@@ -1,0 +1,79 @@
+%% tikzlibrarynfold.code.tex
+%% Copyright 2023 Jonathan Schulz
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3c
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+% http://www.latex-project.org/lppl.txt
+% and version 1.3c or later is part of all distributions of LaTeX
+% version 2008-05-04 or later.
+%
+% This work has the LPPL maintenance status 'maintained'.
+%
+% The Current Maintainer of this work is Jonathan Schulz.
+%
+% This work consists of the files pgflibrarybezieroffset.code.tex,
+% tikzlibrarynfold.code.tex, tikz-nfold-doc.tex, and tikz-nfold-doc.pdf.
+
+% TODO update header with list of files
+% TODO does the head detection work without arrows.meta?
+
+\usepgflibrary{nfold}
+\usetikzlibrary{arrows.meta}
+
+% use \tikzset for scoping reasons, does not appear to be equivalent to \pgfset{/tikz/...=...}
+\tikzset{
+  nfold/.code={
+    \edef\pgf@tmp{\noexpand\pgfkeys{/pgf/nfold=#1}}
+    % patch \tikz@double@setup to set /pgf/nfold=#1 as well
+    \expandafter\expandafter\expandafter\def%
+      \expandafter\expandafter\expandafter\tikz@double@setup%
+      \expandafter\expandafter\expandafter{\expandafter\tikz@double@setup\pgf@tmp}
+  },
+  nfold/.default=2,
+  scaling nfold/.code={%
+    \pgfscope% scope to contain \tikz@double@setup
+      \tikz@double@setup
+      % extract double distance between line centers into \pgf@x
+      \pgf@nfold@compute@widths@from@double
+      \pgf@y=2\pgf@y
+      % store (order-1)*\pgf@x in \pgf@xa
+      \c@pgf@counta=#1
+      \advance\c@pgf@counta by -1\relax
+      \global\pgf@y=\c@pgf@counta\pgf@y
+    \endpgfscope
+    \tikzset{
+      double distance between line centers=\pgf@y,
+      nfold=#1
+    }
+  },
+  scaling nfold/.default=2,
+  % This simply defines the key if tikzcd is not loaded, so we don't run into any errors
+  commutative diagrams/scaling nfold/.code={
+    \pgfscope% scope to contain \tikz@double@setup
+      \tikz@double@setup
+      % extract double distance between line centers into \pgf@x
+      \pgf@nfold@compute@widths@from@double
+      % store (order-1)*\pgf@y in \pgf@ya
+      \c@pgf@counta=#1
+      \advance\c@pgf@counta by -1\relax
+      \pgf@ya=\c@pgf@counta\pgf@y
+      % compute the label offset, which is (order-2)*\pgf@y + .5*\pgf@x
+      \advance\c@pgf@counta by -1\relax
+      \pgf@xa=\c@pgf@counta\pgf@y
+      \advance\pgf@xa by .5\pgf@x
+      % save the results in \pgf@x and \pgf@y
+      \global\pgf@x=\pgf@xa
+      \global\pgf@y=2\pgf@ya
+    \endpgfscope
+    \tikzset{
+      commutative diagrams/every label/.append style/.expanded={outer sep=\the\pgf@x},
+      double distance between line centers=\pgf@y,
+      nfold=#1
+    }
+  },
+  commutative diagrams/scaling nfold/.default=2
+}
+
+\endinput

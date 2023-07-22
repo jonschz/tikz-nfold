@@ -1,4 +1,4 @@
-%% tikz-nfold.sty
+%% pgflibraryoffsetpath.code.tex
 %% Copyright 2023 Jonathan Schulz
 %
 % This work may be distributed and/or modified under the
@@ -16,7 +16,6 @@
 % This work consists of the files pgflibrarybezieroffset.code.tex,
 % tikzlibrarynfold.code.tex, tikz-nfold-doc.tex, and tikz-nfold-doc.pdf.
 
-\usetikzlibrary{arrows.meta}
 \usepgflibrary{bezieroffset}
 
 
@@ -57,8 +56,7 @@
 % to cache the current settings.
 %
 
-% According to the pgf documentation, miter limit=10 is the default value,
-% but I couldn't find and verify this setting in the pgf code
+% The initial value is miter limit=10 according to the pdf standard (it is not set by pgf)
 \gdef\pgf@nfold@cached@miterlimit{10}
 \let\pgf@nfold@old@miterlimit\pgfsetmiterlimit
 \def\pgfsetmiterlimit#1{%
@@ -214,7 +212,7 @@
     \if\pgf@cached@linejoin m% \ifx is not needed because both are only one character
       % miter join
       % First we implement the miter limit: If the angle is too sharp, the miter join is replaced
-      % by a bevel join. This is controlled by /tikz/miter limit=..., initially 10.
+      % by a bevel join. This is controlled e.g. by /tikz/miter limit=..., initially 10.
       \pgf@xa=.5\pgf@xa
       \pgfmathcos@{\pgf@sys@tonumber\pgf@xa}
       \pgf@xa=\pgfmathresult pt\relax
@@ -389,8 +387,6 @@
       % using \pgfmathsubtract@ is more readable and no less efficient than computing this manually
       \pgfmathsubtract@{\pgf@nfold@next@angle@i}{\pgf@nfold@cur@angle@ii}
       \pgf@nfold@clampangle
-      % Edge case handling: If the next segment is a closepath and has length zero, deltaphi is set
-      % to zero to prevent glitches (a zero length segment has no well-defined angle anyway)
       \edef\pgf@nfold@deltaphi@end{\pgfmathresult}
       \pgf@xb=\pgf@nfold@deltaphi@end pt\relax
       \ifdim\pgf@xb<0pt\relax
@@ -579,11 +575,11 @@
 % intersections are precomputed up to this order
 \def\pgf@nfold@intersec@numcached{5}
 
+\newif\ifpgf@nfold@ontheedge
 % This macro extends the arrow body to the tips
 % #1: s=start, e=end
 % #2: start/end point of the path
 % #3: angle
-\newif\ifpgf@nfold@ontheedge
 \def\pgf@nfold@extendtotip#1#2#3{
   \ifpgf@nfold@intersectionsnotloaded
     \pgfutil@packageerror{tikz-nfold}{%
@@ -872,8 +868,6 @@
   \expandafter\pgf@nfold@parselineto\pgf@temp%
   \advance\pgf@xc-\pgf@xd%
   \edef\pgf@temp{{\the\pgf@xc}{\the\pgf@yc}}%
-  % TODO change here, push in separate commit
-%  \expandafter\pgf@nfold@parselineto\pgf@temp%
   \expandafter\pgf@nfold@parseclosepath\pgf@temp%
   \pgf@nfold@parsemoveto{#1}{#2}%
 }
@@ -1099,6 +1093,7 @@
 
 %
 % Tokens for the parsed and processed path
+% ----------------------------------------
 %
 
 %#3: cached normalised tangent (for efficiency)
@@ -1172,7 +1167,6 @@
 }
 
 
-
 \def\pgf@nfold@process@moveup{%
   \let\pgf@nfold@prev@type\pgf@nfold@cur@type%
   \let\pgf@nfold@prev@visible\pgf@nfold@cur@visible%
@@ -1196,67 +1190,9 @@
   \let\pgf@nfold@cur@last\pgf@nfold@next@last%
 }
 
-
 %
-% Iterating over the parsed and processed soft path
-% -------------------------------------------------
-%
-
-\newcount\pgf@nfold@index
-\def\pgf@nfold@run@loop{%
-  \pgf@nfold@index=\pgf@nfold@order%
-  \pgf@nfold@run@loop@%
-}
-
-\def\pgf@nfold@run@loop@{%
-  \pgf@nfold@loop@inner%
-  \advance\pgf@nfold@index by -1\relax
-  \ifnum\pgf@nfold@index>0\relax%
-    \pgf@nfold@run@loop@%
-  \fi%
-}
-
-\def\pgf@nfold@loop@inner{%
-  \pgfmathsetmacro{\pgf@nfold@shift@fraction}%
-    {-1+2*(\pgf@nfold@index-1)/(\pgf@nfold@order-1)}%
-  % Do not store shiftamount as a length (i.e. with pt) because we want to use it in \pgfqpointscale{}{}
-  \pgfmathsetmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@nfold@shift@fraction}
-  % Transformations are already baked into the path; without this call, they would be applied twice
-  \pgftransformreset%
-  \parsedpath%
-  \pgfsyssoftpath@flushcurrentpath%
-  \pgf@up@action%
-}
-
-% Computes both the width of the component lines into \pgf@x and the distance
-% from the center to the outermost line centers into \pgf@y
-% from the current values of \pgflinewidth and \pgfinnerlinewidth.
-\def\pgf@nfold@compute@widths@from@double{
-    \pgf@x=\pgflinewidth\relax%
-    \pgf@y=\pgf@x\relax%
-    \advance\pgf@x-\pgfinnerlinewidth\relax%
-    \advance\pgf@y+\pgfinnerlinewidth\relax%
-    \pgf@x=.5\pgf@x\relax%
-    \pgf@y=.25\pgf@y\relax%
-}
-
-\def\pgf@nfold@render@cached@softpath{%
-  \pgfscope% must use a scope, otherwise we break the arrow tips
-    % Compute the full and constituent part line widths
-    \pgf@nfold@compute@widths@from@double%
-    \pgfsetlinewidth\pgf@x%
-    \edef\pgf@nfold@hwidth{\the\pgf@y}%
-    \pgfprocessround{\pgf@nfold@cachedpath}{\pgf@nfold@cachedpath}% remove tokens from the soft path
-    \pgf@nfold@parsearrows%
-    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\parsedpath}%
-    \pgf@nfold@run@loop%
-  \endpgfscope%
-}
-
-
-%
-% user interface and pgf/TikZ keys
-% --------------------------------
+% user interface
+% --------------
 %
 
 % Outputs a provided soft path in #1 offset by a distance provided in #2.
@@ -1311,79 +1247,6 @@
     \pgftransformreset%
     \parsedpath%
   \endgroup
-}
-
-
-\pgfkeys{
-  /pgf/nfold/.code={%
-    \pgf@nfold@order=#1\relax%
-    \ifnum\pgf@nfold@order<1\relax%
-      \pgfutil@packageerror{tikz-nfold}{The key /pgf/nfold must take a value of at least 1, got \the\pgf@nfold@order}{}%
-    \fi%
-    % If nfold > numcached AND intersections is not loaded AND we draw an Implies tip, we get an error.
-    % We check the first two conditions now and set the respective flag
-    \ifnum\pgf@nfold@order>\pgf@nfold@intersec@numcached\relax
-      \ifdefined\pgfintersectionofpaths\else
-        \pgf@nfold@intersectionsnotloadedtrue
-      \fi
-    \fi
-  },
-  /pgf/nfold/.default=2
-}
-
-
-% use \tikzset for scoping reasons, does not appear to be equivalent to \pgfset{/tikz/...=...}
-\tikzset{
-  nfold/.code={
-    \edef\pgf@tmp{\noexpand\pgfkeys{/pgf/nfold=#1}}
-    % patch \tikz@double@setup to set /pgf/nfold=#1 as well
-    \expandafter\expandafter\expandafter\def%
-      \expandafter\expandafter\expandafter\tikz@double@setup%
-      \expandafter\expandafter\expandafter{\expandafter\tikz@double@setup\pgf@tmp}
-  },
-  nfold/.default=2,
-  scaling nfold/.code={%
-    \pgfscope% scope to contain \tikz@double@setup
-      \tikz@double@setup
-      % extract double distance between line centers into \pgf@x
-      \pgf@nfold@compute@widths@from@double
-      \pgf@y=2\pgf@y
-      % store (order-1)*\pgf@x in \pgf@xa
-      \c@pgf@counta=#1
-      \advance\c@pgf@counta by -1\relax
-      \global\pgf@y=\c@pgf@counta\pgf@y
-    \endpgfscope
-    \tikzset{
-      double distance between line centers=\pgf@y,
-      nfold=#1
-    }
-  },
-  scaling nfold/.default=2,
-  % This simply defines the key if tikzcd is not loaded, so we don't run into any errors
-  commutative diagrams/scaling nfold/.code={
-    \pgfscope% scope to contain \tikz@double@setup
-      \tikz@double@setup
-      % extract double distance between line centers into \pgf@x
-      \pgf@nfold@compute@widths@from@double
-      % store (order-1)*\pgf@y in \pgf@ya
-      \c@pgf@counta=#1
-      \advance\c@pgf@counta by -1\relax
-      \pgf@ya=\c@pgf@counta\pgf@y
-      % compute the label offset, which is (order-2)*\pgf@y + .5*\pgf@x
-      \advance\c@pgf@counta by -1\relax
-      \pgf@xa=\c@pgf@counta\pgf@y
-      \advance\pgf@xa by .5\pgf@x
-      % save the results in \pgf@x and \pgf@y
-      \global\pgf@x=\pgf@xa
-      \global\pgf@y=2\pgf@ya
-    \endpgfscope
-    \tikzset{
-      commutative diagrams/every label/.append style/.expanded={outer sep=\the\pgf@x},
-      double distance between line centers=\pgf@y,
-      nfold=#1
-    }
-  },
-  commutative diagrams/scaling nfold/.default=2
 }
 
 \endinput
