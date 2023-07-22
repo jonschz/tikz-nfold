@@ -8,8 +8,9 @@
 ## Build folder
 build/*
 !build/tikz-nfold
+!build/build.py
 build/tikz-nfold/*
-!README.md
+!build/tikz-nfold/README.md
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
