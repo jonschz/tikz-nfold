@@ -281,12 +281,14 @@ This package is by no means perfect, and even if it were, there would still be s
 
 \section{The basic layer \texttt{pgf} commands}
 
+This package contains three \emph{pgf} libraries building upon one another: \texttt{bezieroffset}, \texttt{offsetpath}, and \nfold. All of these are contained in the \emph{TikZ} library \nfold. 
+
 \subsection{Offsetting curves}
-This package provides some basic layer commands for offsetting curves and straight lines. Use
+This library provides some basic layer commands for offsetting curves and straight lines. Use
 \begin{verbatim}
 \usepgflibrary{bezieroffset}
 \end{verbatim}
-to only import the base layer library. The following commands are provided:
+to only import this base layer library. The following commands are provided:
 \begin{itemize}
   \item \verb|\pgfoffsetcurve{pt1}{pt2}{pt3}{pt4}{distance}|\\%
     This macro draws the parallel of a Bézier curve. The first four parameters are the control points of the Bézier curve (e.g.\ in the form of \verb|\pgfpoint{}{}|), the fifth parameter is the distance by which the curve should be offset. A negative value offsets the curve in the opposite direction. This macro begins with a \verb|\pgfpointmoveto| to the offset of \texttt{pt1}.
@@ -299,7 +301,7 @@ to only import the base layer library. The following commands are provided:
 \end{itemize}
 
 \subsection{Offsetting paths}
-The following macros are part of the TikZ library \nfold{} and offset an entire soft path.
+The following macros are part of the pgf library \texttt{offsetpath} and offset the whole softpath.
 \begin{itemize}
   \item \verb|\pgfoffsetpath{softpath}{distance}|\\%
     This macro offsets \texttt{softpath} by \texttt{distance}. The latter may be negative.
@@ -308,7 +310,7 @@ The following macros are part of the TikZ library \nfold{} and offset an entire 
   \item \verb|\pgfoffsetpathqfraction{softpath}{hwidth}{fraction}|\\%
     This macro is a quicker version of the previous macro  does not parse the input values using the \texttt{pgfmath}-engine.
   \item \verb|\pgfoffsetpathindex{softpath}{width}{i}{n}|\\%
-    In this convenience method, \texttt{i} and \texttt{n} are integers with $1 \leq i \leq n$. It calls the previous macro with \texttt{fraction=-1.0} for \texttt{i=1} and with \texttt{fraction=1.0} for \texttt{i=n} and is thus capable of reproducing the output of \texttt{/tikz/nfold=n} (albeit in a less efficient way).
+    In this convenience method, \texttt{i} and \texttt{n} are integers with $1 \leq i \leq n$. It calls the previous macro with \texttt{fraction=-1.0} for \texttt{i=1} and with \texttt{fraction=1.0} for \texttt{i=n}, hence it is capable of reproducing the output of \texttt{/tikz/nfold=n} (albeit in a less efficient way).
 \end{itemize}
 In the following example we see how \verb|\pgfoffsetpath{..}{0pt}| reproduces the input path (rendered in black) and how \verb|\pgfoffsetpathfraction{..}{8pt}{0}| differs.
 \begin{tkzexample}[latex=4cm]
