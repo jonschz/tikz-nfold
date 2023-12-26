@@ -228,6 +228,24 @@ This edge case needs special handling which is not implemented yet.\\
 \end{tikzpicture}\\
 Both the larger discrepancy between the red line and the double path and the slight corner at the join are expected.
 
+\subsection{nfolder}
+
+\begin{tikzpicture}
+  \draw[nfolder={red, yellow, green, blue}, arrows=->] (0,0) -- (1,0) to[out=0, in=270] (2,1);
+\end{tikzpicture}
+\begin{tikzpicture}
+  \draw[dashed, nfolder={red, green, blue}] (0,0) -- (1,0) -- (1,1) -- cycle;
+\end{tikzpicture}
+\begin{tikzpicture}[rotate=10]
+  \draw[dashed, nfolder={red, blue}, fill=yellow, fill opacity=.5] (0,0) -- (1,0) -- (1,1) -- cycle;
+\end{tikzpicture}
+
+\subsection{offset}
+\begin{tikzpicture}
+  \draw[offset=1mm] (0,0) node[left] {a} to[out=10, in=170] (1,0) node[right] {b};
+\end{tikzpicture}
+
+
 \section{Checking for undesired global effects}
 
 \begin{tikzpicture}[line join=miter, miter limit=10, x={(1.1cm,0)}, y={(0,1.1cm)}]
@@ -311,5 +329,13 @@ Both the larger discrepancy between the red line and the double path and the sli
   \arrow[Rightarrow, squiggly, from=1-1, to=1-2, green]
   \arrow[Rightarrow, squiggly, from=1-1, to=1-2, nfold, purple, opacity=.5]
 \end{tikzcd}
+
+\subsection{nfolder + offset}
+Credits to Qrrbrbirlbel\\
+\begin{tikzcd}
+A \ar[r, bend left, offset=-2mm] & B \ar[d, nfolder={rightarrow, -, help lines, Leftrightarrow}] \\
+  & C \ar[ul,nfolder distance=1.5mm, nfolder={, -Latex, Latex-, {red, thick, Stealth-Latex}}, bend left, ul]
+\end{tikzcd}
+
 
 \end{document}

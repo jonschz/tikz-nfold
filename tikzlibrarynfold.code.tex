@@ -16,9 +16,6 @@
 % This work consists of the files pgflibrarybezieroffset.code.tex,
 % tikzlibrarynfold.code.tex, tikz-nfold-doc.tex, and tikz-nfold-doc.pdf.
 
-% TODO update header with list of files
-% TODO does the head detection work without arrows.meta?
-
 \usepgflibrary{nfold}
 \usetikzlibrary{arrows.meta}
 
@@ -74,6 +71,56 @@
     }
   },
   commutative diagrams/scaling nfold/.default=2
+}
+
+% nfolder - create multiple parallel paths with their own style
+% based on code by Qrrbrbirlbel, https://github.com/jonschz/tikz-nfold/issues/16#issuecomment-1751098823
+\tikzset{
+  % TODO: Test this key properly. How does it interact with other keys?
+  /tikz/offset/.code=%
+    \tikz@addoption{%
+      \pgfgetpath\tikz@temp
+      \pgfsetpath\pgfutil@empty
+      \pgfoffsetpath\tikz@temp{#1}},
+  % TODO: Consider implementing the suggested nfolder'=3 syntax
+  nfolder distance/.initial=1mm,% equal sign distance
+  @nfolder/.style={
+    /tikz/postaction/.expanded={%
+      % I don't like this `draw` here; can we lose information this way?
+      % For sure, a `draw=none` is overwritten
+      draw,%
+      @nfolder draw kth={#1},
+      nfolder #1/.try}%
+  },
+  @nfolder draw kth/.code=%
+    \tikz@addoption{%
+      \pgfgetpath\tikz@temp%
+      \pgfsetpath\pgfutil@empty%
+      \pgfoffsetpathindex{\tikz@temp}{\pgfkeysvalueof{/tikz/nfolder distance}}{#1}{\nfolder@total}%
+  },
+  nfolder/.code={%
+    \tikzset{draw=none}% disable the original path
+    \setcounter{pgf@counta}{0}%
+    \pgfutil@for\tikz@temp:=#1\do{%
+      \stepcounter{pgf@counta}%
+      \tikzset{nfolder \the\value{pgf@counta}/.style/.expand once=\tikz@temp}
+    }%
+    \edef\nfolder@total{\the\value{pgf@counta}}%
+    \tikzset{@nfolder/.list={1, ..., \nfolder@total}}%
+  },
+  % We need special handling for tikz-cd because \arrow has a builtin .cd
+  % that we can't emulate by other means
+  /tikz/commutative diagrams/.cd,
+  nfolder/.code={%
+    \tikzset{draw=none}%
+    \setcounter{pgf@counta}{0}%
+    \pgfutil@for\tikz@temp:=#1\do{%
+      \stepcounter{pgf@counta}%
+      \tikzset{nfolder \the\value{pgf@counta}/.style=/tikz/commutative diagrams/.cd}%
+      \tikzset{nfolder \the\value{pgf@counta}/.append style/.expand once=\tikz@temp}}%
+    \edef\nfolder@total{\the\value{pgf@counta}}%
+    \tikzset{@nfolder/.list={1, ..., \nfolder@total}}%
+  }
 }
 
 \endinput
