@@ -23,6 +23,7 @@
 \usepackage{tikz}
 \usepackage{tkzexample}
 \usetikzlibrary{calc}
+\usetikzlibrary{cd}
 \usetikzlibrary{nfold}
 \usepackage{parskip}
 \usepackage[margin=2.5cm]{geometry}
@@ -130,7 +131,7 @@ Different line joins are supported:
 \end{tikzpicture}
 \end{tkzexample}
 There is also support for \texttt{tikz-cd} with custom label positions for \texttt{scaling nfold}:
-\begin{tkzexample}[pre={\usetikzlibrary{cd}}, latex=3cm]
+\begin{tkzexample}[latex=3cm]
 \begin{tikzcd}
   a \ar[r, Mapsto, bend left, scaling nfold=3] &
   b \ar[d, Rightarrow, nfold, "\alpha", "\beta"'] \\
@@ -139,6 +140,105 @@ There is also support for \texttt{tikz-cd} with custom label positions for \text
 \end{tikzcd}
 \end{tkzexample}
 
+\section{Advanced features}
+
+\subsection{nfolder}
+
+This feature can be used to draw multiple instances of a path with different settings. Use \texttt{/tikz/nfolder distance=<hwidth>} to specify the large path's half width. Activate the feature using \texttt{/tikz/nfolder=\{style\_1, ..., style\_k\}} and provide a list of styles for the different constituent paths.
+\begin{tkzexample}[latex=4cm]
+\begin{tikzpicture}
+  \draw[nfolder distance=6pt,nfolder={red,green,blue,violet}]
+    (0,0) -- (2,0) arc(-90:90:1)
+    to[out=180, in=0] (0,1) -- (0,2);
+\end{tikzpicture}
+\end{tkzexample}
+This is also supported in \texttt{tikz-cd}:
+\begin{tkzexample}[latex=3.5cm]
+\begin{tikzcd}
+  a \ar[rr, out=10, in=190, nfolder distance=2mm, nfolder=
+    {, -Latex, {red, thick, Stealth-Latex}, Latex-}] & & b
+\end{tikzcd}
+\end{tkzexample}
+As this feature has only been implemented recently, bugs are likely to be present. Please report them if you find any.
+
+\subsection{offset}
+The key \texttt{/tikz/offset=<length>} can be used to offset a single path:
+\begin{tkzexample}[latex=2.5cm]
+\begin{tikzpicture}
+  \draw[offset=-1mm] (0,0) to[bend left] (2,0);
+  \draw[offset=1mm] (0,0) to[bend right] (2,0);
+\end{tikzpicture}
+\end{tkzexample}
+This also works with \texttt{fill}:
+\begin{tkzexample}[latex=2.5cm]
+\begin{tikzpicture}
+  \draw[offset=-2mm, fill=blue] (0,0) to[bend left]
+    (2,0) -- (2,1) -- (0,1) -- cycle;
+\end{tikzpicture}
+\end{tkzexample}
+Note that this feature has only been released recently. Please report bugs if you find any.
+
+\subsection{The basic layer \texttt{pgf} commands}
+
+This package contains three \emph{pgf} libraries building upon one another: \texttt{bezieroffset}, \texttt{offsetpath}, and \nfold. All of these are contained in the \emph{TikZ} library \nfold. 
+
+\subsubsection{Offsetting curves}
+This library provides some basic layer commands for offsetting curves and straight lines. Use
+\begin{verbatim}
+\usepgflibrary{bezieroffset}
+\end{verbatim}
+to only import this base layer library. The following commands are provided:
+\begin{itemize}
+  \item \verb|\pgfoffsetcurve{pt1}{pt2}{pt3}{pt4}{distance}|\\%
+    This macro draws the parallel of a Bézier curve. The first four parameters are the control points of the Bézier curve (e.g.\ in the form of \verb|\pgfpoint{}{}|), the fifth parameter is the distance by which the curve should be offset. A negative value offsets the curve in the opposite direction. This macro begins with a \verb|\pgfpointmoveto| to the offset of \texttt{pt1}.
+  \item \verb|\pgfoffsetcurvenomove{pt1}{pt2}{pt3}{pt4}{distance}|\\%
+    The only difference to the previous macro is that this version does not move to the offset of \texttt{pt1}. This is useful if one wants to offset an uninterrupted path consisting of several curves. The output will only be correct if the previous \verb|\pgfpath...| call ends on the offset of \texttt{pt1}.
+  \item \verb|\pgfoffsetline{pt1}{pt2}{distance}|\\%
+    This macro offsets a straight line. It takes two points and the distance as parameters, and starts by moving to the offset of the first point.
+  \item \verb|\pgfoffsetlinenomove{pt1}{pt2}{distance}|\\%
+    This macro is analogous to \verb|\pgfoffsetcurvenomove|.
+\end{itemize}
+
+\subsubsection{Offsetting paths}
+The following macros are part of the pgf library \texttt{offsetpath} and offset the whole softpath.
+\begin{itemize}
+  \item \verb|\pgfoffsetpath{softpath}{distance}|\\%
+    This macro offsets \texttt{softpath} by \texttt{distance}. The latter may be negative.
+  \item \verb|\pgfoffsetpathfraction{softpath}{hwidth}{fraction}|\\%
+    This macro offsets \texttt{softpath} by \texttt{fraction*hwidth}. Note that this is \emph{not} equivalent to the previous macro with \texttt{length=fraction*hwidth} because the joins are treated differently, as can be seen in the examples below. Further note that \texttt{hwidth} must not be negative, and that \texttt{fraction=0} does \emph{not} reproduce the input path.
+  \item \verb|\pgfoffsetpathqfraction{softpath}{hwidth}{fraction}|\\%
+    This macro is a quicker version of the previous macro that does not parse the input values using the \texttt{pgfmath}-engine.
+  \item \verb|\pgfoffsetpathindex{softpath}{hwidth}{i}{n}|\\%
+    In this convenience method, \texttt{i} and \texttt{n} are integers with $1 \leq i \leq n$. It calls the previous macro with \texttt{fraction=-1.0} for \texttt{i=1} and with \texttt{fraction=1.0} for \texttt{i=n}, hence it is capable of reproducing the output of \texttt{/tikz/nfold=n} (albeit in a less efficient way).
+\end{itemize}
+In the following example we see how \verb|\pgfoffsetpath{..}{0pt}| reproduces the input path (rendered in black) and how \verb|\pgfoffsetpathfraction{..}{8pt}{0}| differs.
+\begin{tkzexample}[latex=4cm]
+\begin{tikzpicture}[line join=bevel]
+  \path[save path=\savedpath] (0,0) -- (1,0)
+    to[out=0, in=-80] (1,3) -- (3,2);
+  \draw[color=lightgray,line width=16pt,use path=\savedpath];
+  \pgfoffsetpathfraction{\savedpath}{8pt}{0}
+  \pgfsetlinewidth{1pt} \color{red} \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{8pt}
+  \color{blue} \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{-8pt}
+  \color{green} \pgfusepathqstroke
+  \pgfoffsetpath{\savedpath}{0pt}
+  \pgfsetlinewidth{.4pt} \color{black} \pgfusepathqstroke
+\end{tikzpicture}
+\end{tkzexample}
+Here we see how the commands can be used to customise $n$-fold paths similar to the aforementioned \texttt{/tikz/nfolder}:
+\begin{tkzexample}[latex=4cm]
+\begin{tikzpicture}
+  \path[save path=\mypath] (0,0) -- (2,0) arc(-90:90:1)
+    to[out=180, in=0] (0,1) -- (0,2);
+  \foreach \mycolor [count=\i] in {red,green,blue,violet}
+    \pgfoffsetpathindex{\mypath}{6pt}{\i}{4}
+    \color{\mycolor} \pgfusepathqstroke;
+\end{tikzpicture}
+\end{tkzexample}
+
+Finally, \verb|\usepgflibrary{nfold}| imports the key \texttt{/pgf/nfold} which enables n-fold rendering for \textit{pgf} paths.
 
 \section{Comparison to \tikzdouble}
 \label{sec:doubleIssues}
@@ -277,68 +377,6 @@ This package is by no means perfect, and even if it were, there would still be s
 \end{tkzexample}
   This example has \texttt{round} joins on the large path but \texttt{miter} joins on the constituent paths. This problem does not occur with \verb|\pgfscope|.
 \end{itemize}
-
-
-\section{The basic layer \texttt{pgf} commands}
-
-This package contains three \emph{pgf} libraries building upon one another: \texttt{bezieroffset}, \texttt{offsetpath}, and \nfold. All of these are contained in the \emph{TikZ} library \nfold. 
-
-\subsection{Offsetting curves}
-This library provides some basic layer commands for offsetting curves and straight lines. Use
-\begin{verbatim}
-\usepgflibrary{bezieroffset}
-\end{verbatim}
-to only import this base layer library. The following commands are provided:
-\begin{itemize}
-  \item \verb|\pgfoffsetcurve{pt1}{pt2}{pt3}{pt4}{distance}|\\%
-    This macro draws the parallel of a Bézier curve. The first four parameters are the control points of the Bézier curve (e.g.\ in the form of \verb|\pgfpoint{}{}|), the fifth parameter is the distance by which the curve should be offset. A negative value offsets the curve in the opposite direction. This macro begins with a \verb|\pgfpointmoveto| to the offset of \texttt{pt1}.
-  \item \verb|\pgfoffsetcurvenomove{pt1}{pt2}{pt3}{pt4}{distance}|\\%
-    The only difference to the previous macro is that this version does not move to the offset of \texttt{pt1}. This is useful if one wants to offset an uninterrupted path consisting of several curves. The output will only be correct if the previous \verb|\pgfpath...| call ends on the offset of \texttt{pt1}.
-  \item \verb|\pgfoffsetline{pt1}{pt2}{distance}|\\%
-    This macro offsets a straight line. It takes two points and the distance as parameters, and starts by moving to the offset of the first point.
-  \item \verb|\pgfoffsetlinenomove{pt1}{pt2}{distance}|\\%
-    This macro is analogous to \verb|\pgfoffsetcurvenomove|.
-\end{itemize}
-
-\subsection{Offsetting paths}
-The following macros are part of the pgf library \texttt{offsetpath} and offset the whole softpath.
-\begin{itemize}
-  \item \verb|\pgfoffsetpath{softpath}{distance}|\\%
-    This macro offsets \texttt{softpath} by \texttt{distance}. The latter may be negative.
-  \item \verb|\pgfoffsetpathfraction{softpath}{hwidth}{fraction}|\\%
-    This macro offsets \texttt{softpath} by \texttt{fraction*hwidth}. Note that this is \emph{not} equivalent to the previous macro with \texttt{length=fraction*hwidth} because the joins are treated differently, as can be seen in the examples below. Further note that \texttt{hwidth} must not be negative, and that \texttt{fraction=0} does \emph{not} reproduce the input path.
-  \item \verb|\pgfoffsetpathqfraction{softpath}{hwidth}{fraction}|\\%
-    This macro is a quicker version of the previous macro  does not parse the input values using the \texttt{pgfmath}-engine.
-  \item \verb|\pgfoffsetpathindex{softpath}{width}{i}{n}|\\%
-    In this convenience method, \texttt{i} and \texttt{n} are integers with $1 \leq i \leq n$. It calls the previous macro with \texttt{fraction=-1.0} for \texttt{i=1} and with \texttt{fraction=1.0} for \texttt{i=n}, hence it is capable of reproducing the output of \texttt{/tikz/nfold=n} (albeit in a less efficient way).
-\end{itemize}
-In the following example we see how \verb|\pgfoffsetpath{..}{0pt}| reproduces the input path (rendered in black) and how \verb|\pgfoffsetpathfraction{..}{8pt}{0}| differs.
-\begin{tkzexample}[latex=4cm]
-\begin{tikzpicture}[line join=bevel]
-  \path[save path=\savedpath] (0,0) -- (1,0)
-    to[out=0, in=-80] (1,3) -- (3,2);
-  \draw[color=lightgray,line width=16pt,use path=\savedpath];
-  \pgfoffsetpathfraction{\savedpath}{8pt}{0}
-  \pgfsetlinewidth{1pt} \color{red} \pgfusepathqstroke
-  \pgfoffsetpath{\savedpath}{8pt}
-  \color{blue} \pgfusepathqstroke
-  \pgfoffsetpath{\savedpath}{-8pt}
-  \color{green} \pgfusepathqstroke
-  \pgfoffsetpath{\savedpath}{0pt}
-  \pgfsetlinewidth{.4pt} \color{black} \pgfusepathqstroke
-\end{tikzpicture}
-\end{tkzexample}
-Here we see how the commands can be used to customise $n$-fold paths:
-\begin{tkzexample}[latex=4cm]
-\begin{tikzpicture}
-  \path[save path=\mypath] (0,0) -- (2,0) arc(-90:90:1)
-    to[out=180, in=0] (0,1) -- (0,2);
-  \foreach \mycolor [count=\i] in {red,green,blue,violet}
-    \pgfoffsetpathindex{\mypath}{6pt}{\i}{4}
-    \color{\mycolor} \pgfusepathqstroke;
-\end{tikzpicture}
-\end{tkzexample}
-
 
 \newpage
 \section{Version history}
