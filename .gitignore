@@ -288,3 +288,10 @@ TSWLatexianTemp*
 
 # Makeindex log files
 *.lpz
+
+# Local directories
+/archive
+/local
+
+# IDE
+/.vscode
