@@ -1,3 +1,5 @@
+# pylint: disable=missing-module-docstring,missing-class-docstring,missing-function-docstring
+
 from dataclasses import dataclass
 import functools
 from pathlib import Path
@@ -9,23 +11,28 @@ import sys
 from typing import Final, Self
 from zipfile import ZipFile, ZIP_DEFLATED
 
-
-EXCLUDED_FILES = ["testfile.tex"]
+INCLUDED_TEX_FILES = [
+    "pgflibrarybezieroffset.code.tex",
+    "pgflibrarynfold.code.tex",
+    "pgflibraryoffsetpath.code.tex",
+    "tikzlibrarynfold.code.tex",
+    "tikz-nfold-doc.tex",
+]
 OUTPATH = Path("./build")
 PROJECTNAME = "tikz-nfold"
 ASSEMBLE_PATH = OUTPATH.joinpath(PROJECTNAME)
-IGNORE_VERSION_ERROR = True
+IGNORE_VERSION_ERROR = False
 
 
 @dataclass
-@functools.total_ordering # due to the suffix, this is technically not a total ordering
+@functools.total_ordering  # due to the suffix, this is technically not a total ordering
 class Version:
     major: int
     minor: int
     subminor: int
     suffix: str
-    
-    TAG_RE: Final[re.Pattern] = re.compile(r'(\d+)\.(\d+)\.(\d+)(\S*)')
+
+    TAG_RE: Final[re.Pattern] = re.compile(r"(\d+)\.(\d+)\.(\d+)(\S*)")
 
     def __init__(self, version_str: str):
         match = self.TAG_RE.search(version_str)
@@ -36,10 +43,10 @@ class Version:
         self.minor = int(groups[1])
         self.subminor = int(groups[2])
         self.suffix = groups[3]
-    
+
     def __str__(self) -> str:
         return f"{self.major}.{self.minor}.{self.subminor}{self.suffix}"
-    
+
     def __ge__(self, other: Self) -> bool:
         if self.major != other.major:
             return self.major >= other.major
@@ -50,12 +57,14 @@ class Version:
 
 
 # regex to remove comments
-comment_re = re.compile(r'^([^%]*%).*$')
+comment_re = re.compile(r"^([^%]*%).*$")
 # a line that has only a comment and no code
-comment_line_re = re.compile(r'^\s*%')
+comment_line_re = re.compile(r"^\s*%")
+# regex to find the version in the README
+readme_version_re = re.compile(r"\n## Version (.*)\n")
 
 
-def process_file(file_list: list[Path], filename_in: Path):
+def process_tex_file(file_list: list[Path], filename_in: Path):
     year = date.today().year
     header = f"""%% {filename_in.name}
 %% Copyright {year} Jonathan Schulz
@@ -80,7 +89,9 @@ def process_file(file_list: list[Path], filename_in: Path):
 %
 """
     filename_out = ASSEMBLE_PATH.joinpath(filename_in.name)
-    with filename_in.open('r') as infile, filename_out.open('w', newline='\n') as outfile:
+    with filename_in.open("r") as infile, filename_out.open(
+        "w", newline="\n", encoding="utf-8"
+    ) as outfile:
         outfile.write(header)
         for line in infile.readlines():
             # remove full line comments
@@ -93,11 +104,12 @@ def process_file(file_list: list[Path], filename_in: Path):
                 line = groups[0]
 
             # the comment regex removes the line ending, but it is not applied to all lines
-            line = line.removesuffix('\n')
-            line = line.removesuffix('\r') # this shouldn't be needed, but make sure anyway
+            line = line.removesuffix("\n")
+            # this shouldn't be needed, but make sure anyway
+            line = line.removesuffix("\r")
 
             outfile.write(line)
-            outfile.write('\n')
+            outfile.write("\n")
 
 
 def main():
@@ -107,37 +119,46 @@ def main():
         else:
             print(f"ERROR: {msg}. Exiting...")
             sys.exit(1)
-    
+
     # Find the new revision according to the README.md
-    with ASSEMBLE_PATH.joinpath("README.md").open('r') as readme_file:
-        readme_file.readline()
-        second_line = readme_file.readline() # the version is in the second line
-        readme_version = Version(second_line)
+    with ASSEMBLE_PATH.joinpath("README.md").open("r", encoding="utf-8") as readme_file:
+        readme_contents = readme_file.read()
+        readme_version_match = next(readme_version_re.finditer(readme_contents), None)
+        if not readme_version_match:
+            raise ValueError("Could not find version specifier in README.md")
+
+        readme_version = Version(readme_version_match.group(1))
 
     # Find the existing git tags
-    tag_output_bytes = subprocess.run("git tag", capture_output=True)
-    tags = tag_output_bytes.stdout.decode('ascii').splitlines()
+    tag_output_bytes = subprocess.run("git tag", capture_output=True, check=True)
+    tags = tag_output_bytes.stdout.decode("ascii").splitlines()
     tags = [Version(tag) for tag in tags]
     tags.sort(reverse=True)
     latest_git_version = tags[0] if tags else None
 
-    print(f"Current README version: v{readme_version}; latest git version: v{latest_git_version}")
+    print(
+        f"Current README version: v{readme_version}; latest git version: v{latest_git_version}"
+    )
     if latest_git_version:
         # Check if the README.md has a new version number
         if readme_version <= latest_git_version:
-            version_warning_or_error(f"Version in README.md not updated")
+            version_warning_or_error("Version in README.md not updated")
     else:
         print("Warning: No git version tags found")
 
     # Check if there is a change log in tikz-nfold-doc.tex
-    with Path("tikz-nfold-doc.tex").open('r') as docfile:
+    with Path("tikz-nfold-doc.tex").open("r", encoding="utf-8") as docfile:
         cont = docfile.read()
         assert len(docfile.read()) == 0
         if cont.find("\\textbf{v%s}" % readme_version) < 0:
-            version_warning_or_error(f"Missing changelog entry for version v{readme_version}")
+            version_warning_or_error(
+                f"Missing changelog entry for version v{readme_version}"
+            )
 
     print("Compiling the documentation...")
-    compile_doc = subprocess.run(["pdflatex", "tikz-nfold-doc.tex"], capture_output=True)
+    compile_doc = subprocess.run(
+        ["pdflatex", "tikz-nfold-doc.tex"], capture_output=True, check=False
+    )
     if compile_doc.returncode != 0:
         print("Compiling the documentation failed, see the log for details")
         sys.exit(1)
@@ -147,22 +168,31 @@ def main():
     for filename in ASSEMBLE_PATH.iterdir():
         if filename.name != "README.md":
             filename.unlink()
-    
+
     # copy the documentation pdf
     shutil.copy("tikz-nfold-doc.pdf", ASSEMBLE_PATH.joinpath("tikz-nfold-doc.pdf"))
-    
+
     print("Removing comments from the source files...")
-    file_list = [f for f in Path(".").iterdir() if f.suffix == '.tex' and f.name not in EXCLUDED_FILES]
+    file_list = [
+        f
+        for f in Path(".").iterdir()
+        if f.suffix == ".tex" and f.name in INCLUDED_TEX_FILES
+    ]
     for filename in file_list:
-        process_file(file_list, filename)
+        process_tex_file(file_list, filename)
     print("Done.")
 
     print("Generating the zip file...")
-    with ZipFile(OUTPATH.joinpath(f"tikz-nfold-v{readme_version}.zip"), 'w', compression=ZIP_DEFLATED, compresslevel=5) as zipfile:
+    with ZipFile(
+        OUTPATH.joinpath(f"tikz-nfold-v{readme_version}.zip"),
+        "w",
+        compression=ZIP_DEFLATED,
+        compresslevel=5,
+    ) as zipfile:
         for filename in ASSEMBLE_PATH.iterdir():
             zipfile.write(filename, f"tikz-nfold/{filename.name}")
     print("Done.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
