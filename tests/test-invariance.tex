@@ -5,6 +5,8 @@
 % nfold imports arrow.meta by default, so we import it explicitly for comparison
 \usetikzlibrary{arrows.meta}
 
+% to facilitate debugging
+\errorcontextlines=10000
 
 \begin{document}
 
@@ -30,7 +32,18 @@ Expected behaviour:\\[1ex]
 
 Actual behaviour:\\
 {%
-\usetikzlibrary{nfold}%
+
+% Make sure we import the libraries currently in development, not the published ones installed on the system
+\makeatletter
+% if not overwritten, these two will import the system libraries, not the ones in development
+\def\usepgflibrary#1{}
+\def\usetikzlibrary#1{}
+\input{../pgflibrarybezieroffset.code.tex}
+\input{../pgflibraryoffsetpath.code.tex}
+\input{../pgflibrarynfold.code.tex}
+\input{../tikzlibrarynfold.code.tex}
+\makeatother
+
 \newcount\arrowsonlycalls
 \arrowsonlycalls=0
 \makeatletter

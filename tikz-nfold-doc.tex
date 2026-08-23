@@ -511,7 +511,7 @@ Note that $-\tfrac{\pi}{3} \leq \beta \leq \tfrac{\pi}{3}$ (and hence $\cos(\bet
 \begin{equation}
   \frac{\sin(\alpha + \beta)}{\cos(\beta)} = \sin(\alpha) + \cos(\alpha) \frac{\sin(\beta)}{\cos(\beta)} \ ,
 \end{equation}
-and all of these terms can be computed directly from dot and cross products of vectors between the original control points. To summarise, let $\vv_{ij} := \overrightarrow{A_iA_j}$, and let $\vv_0$, $\vv_1$ be the normalised tangents at $t=0$ and $t=1$, respectively (see \cref{subsec:stabilisation} how they are computed). Then
+and all of these terms can be computed directly from dot and cross products of vectors between the original control points. To summarise, let $\vv_{ij} := \overrightarrow{A_iA_j}$, and let $\tv_0$, $\tv_1$ be the normalised tangents at $t=0$ and $t=1$, respectively (see \cref{subsubsec:tangents} how they are computed). Then
 \begin{equation}
 % for checking
   \overline{A'_1A'_2} = \overline{A_1A_2} + \frac{d}{\overline{A_1A_4}^2}\cdot\left(\vv_{12} \times \vv_{14} - \vv_{12}\cdot\vv_{14} \frac{\vv_{14}\times\tv_1}{\vv_{14}\cdot\tv_1} \right) \ .
@@ -530,6 +530,7 @@ Let furthermore $\uv_{ij} := \vv_{ij}/|\vv_{ij}|$ be the normalised vectors. The
 \subsection{Edge cases}
 
 \subsubsection{Overlaps: \texorpdfstring{$A_i = A_{i+1}$}{A\_i = A\_(i+1)}}
+\label{subsubsec:tangents}
 
 If there is one overlap $A_1=A_2$, $A_2=A_3$ or $A_3=A_4$, the cubic Bézier curve reduces to a quadratic one. For two overlaps, we get a linear Bézier curve (i.e.\ a straight line), and for three overlaps we get a point. The main problem to watch out for is that the tangents $\tv_0$ and $\tv_1$ need to be computed differently:
 \begin{itemize}
@@ -585,7 +586,7 @@ A closer inspection of this special case reveals a number of sub-cases:
 As seen in \cref{subsec:subdivisionUsed}, there are cases where the offsetting algorithm will be called on non-simple curves. In such cases it is essential that the code does not crash (e.g. from division by zero), and that the output produced is at least somewhat sensible. The following measures are taken:
 \begin{itemize}
   \item If $\overline{A_1A_4}$ is very close to zero,\footnote{Clamping the fraction $d/\overline{A_1A_4}$ to some maximum value did not work well, as it had a tendency of producing false positives.} we set $\overline{A'_1A'_2} = \overline{A_1A_2}$ and $\overline{A'_3A'_4} = \overline{A_3A_4}$, forming a rather rough approximation of the parallel curve. This causes a warning to be logged.
-  \item For simple curves we find $\uv_{14}\cdot\uv_{34} \geq 0.5$ in the denominator. Therefore, for non-simple curves, the denominator is clamped to $[0.5, 1.0]$, preventing division by zero.
+  \item For simple curves we find $\uv_{14}\cdot\uv_{12} \geq 0.5$ and  $\uv_{14}\cdot\uv_{34} \geq 0.5$ in the denominators. Therefore, for non-simple curves, the denominators are clamped to $[0.5, 1.0]$, preventing division by zero.
 \end{itemize}
 
 

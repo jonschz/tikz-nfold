@@ -1,7 +1,19 @@
 \documentclass[11pt,a4paper]{article}
 
 \usepackage{tikz}
-\usepgflibrary{offsetpath}
+
+% Make sure we import the libraries currently in development, not the published ones installed on the system
+\makeatletter
+% if not overwritten, these two will import the system libraries, not the ones in development
+\def\usepgflibrary#1{}
+\def\usetikzlibrary#1{}
+\input{../pgflibrarybezieroffset.code.tex}
+\input{../pgflibraryoffsetpath.code.tex}
+\input{../pgflibrarynfold.code.tex}
+\makeatother
+
+% to facilitate debugging
+\errorcontextlines=10000
 
 \begin{document}
 
