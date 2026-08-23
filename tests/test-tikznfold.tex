@@ -213,22 +213,37 @@ This edge case needs special handling which is not implemented yet.\\
 
 \subsection{Closed paths with zero length final segment}
 
-\subsubsection{Zero angle (issue \#13)}
+\subsubsection{Zero angle, final curve segment (issue \#13)}
 % based on #13 reported by Qrrbrbirlbel
 
+% The `rounded corners=2mm` inserts `curveto` segments at each corner, so TikZ' final path has a zero length closepath
 \begin{tikzpicture}
-  \draw[draw=green,opacity=0.5, double distance=5pt, rounded corners=2mm, save path=\tmppath] (0,0) -- (0,1) -- (1,1) -- (1,0) -- cycle (2.5,.5) -- (2,0) -- (1.5,.5) -- (2,1) -- cycle;
+  \draw[draw=green,opacity=0.5, double distance=5pt, rounded corners=2mm, save path=\tmppath] (0,0) -- (1,0) -- (1,1) -- (0,1) -- cycle;
+  \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
+\end{tikzpicture}
+\begin{tikzpicture}
+  \draw[draw=green,opacity=0.5, double distance=5pt, rounded corners=2mm, save path=\tmppath] (2.5,.5) -- (2,0) -- (1.5,.5) -- (2,1) -- cycle;
   \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
 \end{tikzpicture}
 
-
-\subsubsection{Non-zero angle (issue \#14)}
+\subsubsection{Non-zero angle, final curve segment (issue \#14)}
 
 \begin{tikzpicture}
   \draw[draw=green,opacity=0.5, double distance=5pt, save path=\tmppath]  (0,0) arc[start angle=270, end angle=360, radius=1cm] arc[start angle=90, end angle=180, radius=1cm] -- cycle;
   \path[draw=purple, opacity=0.5, double distance=5pt, nfold=4, use path=\tmppath];
 \end{tikzpicture}
 
+\subsubsection{Zero angle, final line segment (issue \#19)}
+
+\begin{tikzpicture}
+  \draw[double distance=5pt, nfold] (0.5, 0) -- (1, 0) -- (0, 1) -- (0,0) -- (0.5, 0) -- cycle;
+\end{tikzpicture}
+
+
+\subsubsection{Non-zero angle, final line segment (issue \#19)}
+\begin{tikzpicture}
+  \draw[double distance=5pt, nfold] (0, 0) -- (1, 0) -- (0, 1) -- (0,0) -- cycle;
+\end{tikzpicture}
 
 \subsection{Key \texttt{/tikz/scaling nfold}}
 
@@ -254,6 +269,39 @@ This edge case needs special handling which is not implemented yet.\\
   \draw[double distance=5pt, nfold] (4,1) .. controls (3.1,1) and (3,.1) .. (3,0) --  (2.5,1);
 \end{tikzpicture}\\
 Both the larger discrepancy between the red line and the double path and the slight corner at the join are expected.
+
+\subsection{Degenerate closed paths (issue \#19)}
+
+\subsubsection{Fully singular paths}
+\capturewarnings{
+  \begin{tikzpicture}
+    % does not emit a warning
+    \draw[double distance=5pt, nfold] (0,0) -- cycle;
+    % these three emit one warning each
+    \draw[double distance=5pt, nfold] (0,0) -- (0, 0.00001) -- cycle;
+    \draw[double distance=5pt, nfold] (0,0) -- (0, 0.00001) -- (0, 0.00002) -- cycle;
+    \draw[double distance=5pt, nfold] (0,0) -- (0, 0.00001) -- (0, 0.00002) -- (0, 0.00003) -- cycle;
+  \end{tikzpicture}\\
+  \emph{No output expected; this test passes if pdflatex does not crash and the warnings below match.} \\
+  Expected: Warnings ``The penultimate and the last segment of a closed path are both too short, which will most likely lead to glitches.'' \texttimes 3 \\[.5em]
+  Actual warnings:\\ \capturedwarning
+}
+
+\subsubsection{Two degenerate segments at the end of a closed path}
+\capturewarnings{
+  \begin{tikzpicture}
+    \draw[double distance=5pt, nfold] (0,0) -- (1, 0) -- (0, 1) -- (0, 0.00003) -- (0, 0.00002) -- cycle;
+  \end{tikzpicture}\\
+  Expected: Glitch in the bottom left corner, warning ``The penultimate and the last segment of a closed path are both too short, which will most likely lead to glitches.'' \\[.5em]
+  Actual warning:\\ \capturedwarning
+}
+
+\subsubsection{Only the last segment is non-degenerate}
+
+\begin{tikzpicture}
+\draw[double distance=5pt, nfold] (0,0) -- (0, 0.07pt) -- (0, 0.14pt) -- cycle;
+\end{tikzpicture}\\
+\emph{No output expected; this test passes if pdflatex does not crash.}
 
 \section{Checking for undesired global effects}
 
