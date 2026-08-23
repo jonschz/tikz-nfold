@@ -812,7 +812,6 @@
     % We need special treatment here, as otherwise the arrow tip extension
     % does not work correctly. The \pgf@nfold@processmoveto will be called
     % in \pgf@nfold@process@conn@subpath.
-    \def\pgf@nfold@parser@last@moveto{{#1}{#2}}%
     % Make sure \pgf@cur@conn@subpath is no longer empty so double movetos are not
     % treated the same as single movetos. This is also relevant to arrow tip extensions
     \def\pgf@cur@conn@subpath{\relax}%
@@ -822,30 +821,32 @@
     \pgf@nfold@lastconnsubpathfalse%
     % A moveto marks the beginning/end of one connected sub-path
     \pgf@nfold@process@conn@subpath%
-    \let\pgf@nfold@last@closepath@from\pgfutil@empty%
+    \let\pgf@nfold@last@closepath@from@x\pgfutil@empty% the x coordinate is also the indicator whether the path is closed
     \let\pgf@cur@conn@subpath\pgfutil@empty%
     % set up "first" again which may be needed for the arrow tip extension
     \pgf@nfold@parser@setupfirst%
-    \def\pgf@nfold@parser@last@moveto{{#1}{#2}}%
   \fi%
+  \def\pgf@nfold@parser@last@moveto@x{#1}%
+  \def\pgf@nfold@parser@last@moveto@y{#2}%
   \pgf@nfold@parsesoftpath@finish@segment{#1}{#2}%
 }
 
 \def\pgf@nfold@parselineto#1#2{%
-  \def\pgf@nfold@macrotoadd{\pgf@nfold@processlineto{#1}{#2}}%
+  \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@processlineto{\pgf@nfold@parser@previous@x}{\pgf@nfold@parser@previous@y}{#1}{#2}}%
   \pgf@nfold@addmacro\pgf@cur@conn@subpath%
   \pgf@nfold@parsesoftpath@finish@segment{#1}{#2}%
 }
 
 \def\pgf@nfold@parseclosepath#1#2{%
-  \let\pgf@nfold@last@closepath@from\pgf@nfold@parser@previous@pt%
-  \def\pgf@nfold@macrotoadd{\pgf@nfold@processclosepath{#1}{#2}}%
+  \edef\pgf@nfold@last@closepath@from@x{\pgf@nfold@parser@previous@x}%
+  \edef\pgf@nfold@last@closepath@from@y{\pgf@nfold@parser@previous@y}%
+  \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@processclosepath{\pgf@nfold@parser@previous@x}{\pgf@nfold@parser@previous@y}{#1}{#2}}%
   \pgf@nfold@addmacro\pgf@cur@conn@subpath%
   \pgf@nfold@parsesoftpath@finish@segment{#1}{#2}%
 }
 
 \def\pgf@nfold@parsecurveto#1#2{%
-  \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@processcurveto\pgf@nfold@parser@supporta\pgf@nfold@parser@supportb{#1}{#2}}%
+  \edef\pgf@nfold@macrotoadd{\noexpand\pgf@nfold@processcurveto{\pgf@nfold@parser@previous@x}{\pgf@nfold@parser@previous@y}\pgf@nfold@parser@supporta\pgf@nfold@parser@supportb{#1}{#2}}%
   \pgf@nfold@addmacro\pgf@cur@conn@subpath%
   \pgf@nfold@parsesoftpath@finish@segment{#1}{#2}%
 }
@@ -902,8 +903,12 @@
 \def\pgf@nfold@parsesoftpath#1#2{%
   \let\pgf@cur@conn@subpath\pgfutil@empty%
   \let\pgf@all@parsed@subpaths\pgfutil@empty%
-  \edef\pgf@nfold@parser@last@moveto{{\the\pgf@path@lastx}{\the\pgf@path@lasty}}%
-  \let\pgf@nfold@last@closepath@from\pgfutil@empty%
+  \edef\pgf@nfold@parser@last@moveto@x{\the\pgf@path@lastx}%
+  \edef\pgf@nfold@parser@last@moveto@y{\the\pgf@path@lasty}%
+  % Set some defaults. These will only be relevant in pgf paths without a moveto at the start.
+  \let\pgf@nfold@parser@previous@x\pgf@nfold@parser@last@moveto@x%
+  \let\pgf@nfold@parser@previous@y\pgf@nfold@parser@last@moveto@y%
+  \let\pgf@nfold@last@closepath@from@x\pgfutil@empty% the x coordinate is also the indicator whether the path is closed
   \pgf@nfold@parser@setupfirst%
   \expandafter\pgf@nfold@@parsesoftpath#1\pgf@stop{}{}%
   \let#2\pgf@all@parsed@subpaths%
@@ -993,7 +998,8 @@
 % - \pgf@nfold@last@segment
 %
 \def\pgf@nfold@parsesoftpath@finish@segment#1#2{%
-  \def\pgf@nfold@parser@previous@pt{{#1}{#2}}%
+  \def\pgf@nfold@parser@previous@x{#1}%
+  \def\pgf@nfold@parser@previous@y{#2}%
   % store the last two segments, as they might be needed for zero-length \pgfpathclose-segments
   \let\pgf@nfold@sectolast@segment\pgf@nfold@last@segment%
   \let\pgf@nfold@last@segment\pgf@nfold@macrotoadd%
@@ -1021,14 +1027,14 @@
 %
 \def\pgf@nfold@process@conn@subpath{%
   \let\pgf@parsed@cur@conn@seg\pgfutil@empty%
-  \ifx\pgf@nfold@last@closepath@from\pgfutil@empty%
-    \expandafter\pgf@nfold@processmoveto\pgf@nfold@parser@last@moveto%
+  \ifx\pgf@nfold@last@closepath@from@x\pgfutil@empty% the x coordinate is also the indicator whether the path is closed
+    \pgf@nfold@processmoveto{\pgf@nfold@parser@last@moveto@x}{\pgf@nfold@parser@last@moveto@y}%
   \else%
     % This connected sub-path ends on a closepath. In order to get
     % the join right, we prepend the current sub-path with an invisible line
     % identical to the line of the \pgfpathclose.
-    \expandafter\pgf@nfold@processmoveto\pgf@nfold@last@closepath@from%
-    \expandafter\pgf@nfold@processinvisibleline\pgf@nfold@parser@last@moveto%
+    \pgf@nfold@processmoveto{\pgf@nfold@last@closepath@from@x}{\pgf@nfold@last@closepath@from@y}%
+    \pgf@nfold@processinvisibleline{\pgf@nfold@last@closepath@from@x}{\pgf@nfold@last@closepath@from@y}{\pgf@nfold@parser@last@moveto@x}{\pgf@nfold@parser@last@moveto@y}%
   \fi%
   \pgf@cur@conn@subpath%
   \let\pgf@nfold@macrotoadd\pgf@parsed@cur@conn@seg%
@@ -1084,34 +1090,34 @@
 % External variables affecting the behaviour:
 % - \pgf@x, \pgf@y: Need to be set to the tangent vector of this line. Does not need to be normalised.
 %
-\def\pgf@nfold@process@line@common#1#2#3{%
+\def\pgf@nfold@process@line@common#1#2#3#4#5{%
   \pgf@nfold@process@moveup%
   % Normalise the vector (\pgf@x, \pgf@y), which puts that vector's angle into \pgf@tmp as a side effect
   \pgfextract@process\pgf@tmp@tang@i{\pgfpointnormalised{}\global\let\pgf@nfold@tmp\pgf@tmp}
-  \let\pgf@nfold@next@type=#3%
+  \let\pgf@nfold@next@type=#5%
   \let\pgf@nfold@next@visible=1%
   \let\pgf@nfold@next@tang@i\pgf@tmp@tang@i
   \let\pgf@nfold@next@tang@ii\pgf@tmp@tang@i
   \let\pgf@nfold@next@angle@i\pgf@nfold@tmp
   \let\pgf@nfold@next@angle@ii\pgf@nfold@tmp
-  \let\pgf@nfold@next@first\pgf@nfold@cur@last
-  \def\pgf@nfold@next@last{\pgf@x#1\pgf@y#2}%
+  \def\pgf@nfold@next@first{\pgf@x#1\pgf@y#2}%
+  \def\pgf@nfold@next@last{\pgf@x#3\pgf@y#4}%
   \pgf@nfold@process@segment%
 }
 
-\def\pgf@nfold@processlineto#1#2{%
+\def\pgf@nfold@processlineto#1#2#3#4{%
   % the current end is still stored in next@last because process@moveup has not been called yet
-  \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
+  \pgf@process{\pgfpointdiff{\pgf@x#1\pgf@y#2}{\pgf@x#3\pgf@y#4}}%
   \pgfpointtaxicabnorm\pgf@xa%
   % remove degenerate line segments (reduces glitches)
   \ifdim\pgf@xa>.1pt\relax%
-    \pgf@nfold@process@line@common{#1}{#2}{l}%
+    \pgf@nfold@process@line@common{#1}{#2}{#3}{#4}{l}%
   \fi%
 }%
 
-\def\pgf@nfold@processcurveto#1#2#3#4#5#6{%
+\def\pgf@nfold@processcurveto#1#2#3#4#5#6#7#8{%
   \pgf@nfold@process@moveup%
-  \pgf@offset@compute@tangents{\pgf@nfold@cur@last}{\pgf@x#1\pgf@y#2}{\pgf@x#3\pgf@y#4}{\pgf@x#5\pgf@y#6}%
+  \pgf@offset@compute@tangents{\pgf@x#1\pgf@y#2}{\pgf@x#3\pgf@y#4}{\pgf@x#5\pgf@y#6}{\pgf@x#7\pgf@y#8}%
   \let\pgf@nfold@next@type=c%
   \let\pgf@nfold@next@visible=1%
   % the following only need to be set if visible=1
@@ -1119,21 +1125,22 @@
   \let\pgf@nfold@next@tang@ii=\pgf@tmp@tang@ii
   \let\pgf@nfold@next@angle@i\pgf@tmp@angle@i
   \let\pgf@nfold@next@angle@ii\pgf@tmp@angle@ii
-  \let\pgf@nfold@next@first\pgf@nfold@cur@last
-  \def\pgf@nfold@next@supporta{\pgf@x#1\pgf@y#2}
-  \def\pgf@nfold@next@supportb{\pgf@x#3\pgf@y#4}
-  \def\pgf@nfold@next@last{\pgf@x#5\pgf@y#6}
+  \def\pgf@nfold@next@first{\pgf@x#1\pgf@y#2}
+  \def\pgf@nfold@next@supporta{\pgf@x#3\pgf@y#4}
+  \def\pgf@nfold@next@supportb{\pgf@x#5\pgf@y#6}
+  \def\pgf@nfold@next@last{\pgf@x#7\pgf@y#8}
   \pgf@nfold@process@segment%
 }%
 
-\def\pgf@nfold@processclosepath#1#2{%
-  \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
+\def\pgf@nfold@processclosepath#1#2#3#4{%
+  \pgf@process{\pgfpointdiff{\pgf@x#1\pgf@y#2}{\pgf@x#3\pgf@y#4}}%
   % closepath segments should always be processed even if they have zero length
   \pgfpointtaxicabnorm\pgf@xa%
-  \ifdim\pgf@xa<0.1pt\relax%
-    \pgf@nfold@process@closepath@zerolength{#1}{#2}%
+  \ifdim\pgf@xa>0.1pt\relax%
+    \pgf@nfold@process@line@common{#1}{#2}{#3}{#4}{o}%
   \else%
-    \pgf@nfold@process@line@common{#1}{#2}{o}%
+    % only needs one point as its argument since both are effectively the same
+    \pgf@nfold@process@closepath@zerolength{#3}{#4}%
   \fi%
 }%
 
@@ -1144,16 +1151,26 @@
   % Set the start and end tangent to the tangent of the first segment
   \let\pgf@nfold@next@tang@i\pgf@nfold@connsubpath@tang@i
   \let\pgf@nfold@next@tang@ii\pgf@nfold@connsubpath@tang@i
-  \let\pgf@nfold@next@angle@i\pgf@nfold@connsubpath@angle@i
-  \let\pgf@nfold@next@angle@ii\pgf@nfold@connsubpath@angle@i
+  \ifx\pgf@nfold@connsubpath@angle@i\pgf@nfold@undefined%
+  % Part of the fix for GH #19.
+  % If the connected sub-path (without degenerate segments) is empty,
+  % there is no "first angle" in the path before the \pgfpathclose is processed.
+  % If we get here, \pgf@nfold@processinvisibleline will emit a warning,
+  % so we do not need to emit another warning here.
+    \def\pgf@nfold@next@angle@i{0}%
+    \def\pgf@nfold@next@angle@ii{0}%
+  \else%
+    \let\pgf@nfold@next@angle@i\pgf@nfold@connsubpath@angle@i%
+    \let\pgf@nfold@next@angle@ii\pgf@nfold@connsubpath@angle@i%
+  \fi%
   \let\pgf@nfold@next@first\pgf@nfold@cur@last
   % If problems arise, we need to put a fake point here (like \pgf@nfold@next@first + \pgf@nfold@next@tang@i)
   \def\pgf@nfold@next@last{\pgf@x#1\pgf@y#2}%
   \pgf@nfold@process@segment%
 }
 
-\def\pgf@nfold@processinvisibleline#1#2{%
-  \pgf@process{\pgfpointdiff{\pgf@nfold@next@last}{\pgf@x#1\pgf@y#2}}%
+\def\pgf@nfold@processinvisibleline#1#2#3#4{%
+  \pgf@process{\pgfpointdiff{\pgf@x#1\pgf@y#2}{\pgf@x#3\pgf@y#4}}%
   \pgfpointtaxicabnorm\pgf@xa%
   % In order to correctly render the start/end join in a closed path,
   % the \pgfpathclose segment is copied to the start of the path as an invisible line.
@@ -1164,21 +1181,43 @@
   % the same angle/tangent as the last finite-sized segment, which is the second-to-last
   % segment overall (cached in \pgf@nfold@sectolast@segment).
   \ifdim\pgf@xa>.1pt\relax%
-    \pgf@nfold@process@line@common{#1}{#2}{i}%
+    \pgf@nfold@process@line@common{#1}{#2}{#3}{#4}{i}%
   \else%
-    \begingroup%
-      % find the tangent of the second-to-last segment
-      \let\pgf@nfold@process@segment\relax%
-      \pgf@nfold@sectolast@segment%
-      \global\let\pgf@nfold@tmp\pgf@nfold@next@tang@ii%
-    \endgroup%
-    % Construct an invisible line with length 1pt and the correct tangent.
-    % This step might not be needed since the join computations only require the tangent,
-    % but the invisibleline segment would be inconsistent otherwise, so better play it safe.
-    \pgfextract@process\pgf@nfold@next@first{\pgfpointdiff{\pgf@nfold@tmp}{\pgfqpoint{#1}{#2}}}%
-    % write the tangent into (\pgf@x, \pgf@y) where the next macro expects it to be
-    \pgf@nfold@tmp%
-    \pgf@nfold@process@line@common{#1}{#2}{i}%
+    \ifx\pgf@nfold@sectolast@segment\pgf@nfold@undefined%
+      % Issue #19: We end up here for degenerate paths consisting of only a \pgfpathclose, e.g.
+      % \draw (0, 0) -- cycle;
+      % Without this check, the subsequent code will crash because \pgf@nfold@sectolast@segment is undefined.
+      % Such a path will be invisible anyway, so we can get away with not doing anything here.
+    \else%
+      % Construct an invisible line with length 1pt and the correct tangent, which we try to get from \pgf@nfold@sectolast@segment.
+      \begingroup%
+        % We only want to compute the tangent of the penultimate segment.
+        % Therefore, we disable \pgf@nfold@process@segment so the call below does not cause any side effects.
+        \let\pgf@nfold@process@segment\relax%
+        \pgf@nfold@sectolast@segment%
+        \global\let\pgf@nfold@tmp@tangent\pgf@nfold@next@tang@ii%
+      \endgroup%
+      \ifx\pgf@nfold@tmp@tangent\pgf@nfold@undefined%
+        % Issue #19: We end up here if the penultimate path segment is extremely short, e.g.
+        % \draw[nfold] (0,0) -- (0, 0.00001) -- cycle;
+        % In that case, the segment will be skipped and \pgf@nfold@next@tang@ii above will not be defined.
+        % Handling this case correctly (in the subset of cases where that is even possible) will be hard,
+        % computationally expensive, and overkill for something that most likely is a user error.
+        \pgfutil@packagewarning{tikz-nfold}{The penultimate and the last segment of a closed path are both too short, which will most likely lead to glitches.}%
+        % We set a default for the undefinable tangent value of the last segment.
+        % This will be wrong, but it is better than using whatever random old data might be in these variables.
+        \def\pgf@nfold@tmp@tangent{\pgf@x=1pt\relax\pgf@y=0pt\relax}%
+      \fi
+      % For the sake of consistency, we compute a synthetic starting point of this invisible line segment.
+      % This point will probably never be evaluated, but I do not want the inconsistency between the tangent
+      % and the actual points to cause any issues down the line.
+      \pgfpointdiff{\pgf@nfold@tmp@tangent}{\pgfqpoint{#3}{#4}}%
+      \pgf@xa=\pgf@x
+      \pgf@ya=\pgf@y
+      % Write the tangent into (\pgf@x, \pgf@y), where \pgf@nfold@process@line@common expects it to be.
+      \pgf@nfold@tmp@tangent%
+      \pgf@nfold@process@line@common{\the\pgf@xa}{\the\pgf@ya}{#3}{#4}{i}%
+    \fi%
   \fi%
 }%
 
