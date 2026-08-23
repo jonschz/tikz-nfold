@@ -1,12 +1,49 @@
 \documentclass[11pt,a4paper]{article}
 
 \usepackage{tikz}
-\usetikzlibrary{nfold}
-\usetikzlibrary{intersections}
+\usetikzlibrary{intersections}% required for arrow extensions with n > 5
 \usetikzlibrary{cd}
-% for zigzag decoration
-\usetikzlibrary{decorations.pathmorphing}
+\usetikzlibrary{decorations.pathmorphing}% for zigzag decoration
 
+% Make sure we import the libraries currently in development, not the published ones installed on the system
+\makeatletter
+% if not overwritten, these two will import the system libraries, not the ones in development
+\def\usepgflibrary#1{}
+\def\usetikzlibrary#1{}
+\input{../pgflibrarybezieroffset.code.tex}
+\input{../pgflibraryoffsetpath.code.tex}
+\input{../pgflibrarynfold.code.tex}
+\input{../tikzlibrarynfold.code.tex}
+\makeatother
+
+% to facilitate debugging
+\errorcontextlines=10000
+
+% stops the editor from rendering \tmppath as an undefined macro
+\let\tmppath\relax
+
+\makeatletter
+
+%
+% Suppresses all calls from #1 to \pgfutil@packagewarning and stores them in \capturedwarning.
+%
+\newcommand{\capturewarnings}[1]{
+  \begingroup
+  \let\capturedwarning\pgfutil@empty
+  \def\pgfutil@packagewarning##1##2{
+    \ifx\capturedwarning\pgfutil@empty
+    \xdef\capturedwarning{##2}
+    \else
+    \xdef\capturedwarning{\capturedwarning\\##2}
+    \fi
+  }
+  #1
+  \endgroup
+}
+% stops the editor from rendering \capturedwarning as an undefined macro
+\let\capturedwarning\relax
+
+\makeatother
 
 \begin{document}
 
@@ -34,33 +71,23 @@ If \texttt{/tikz/nfold} were to set \verb"\pgf@nfold@order" directly, TikZ would
 \end{tikzpicture}
 
 \subsection{Angle too sharp}
-{
-  \makeatletter
-  \def\clearerrormsg{\let\errormsg\pgfutil@empty}
-  \renewcommand{\pgfutil@packagewarning}[2]{
-    \ifx\errormsg\pgfutil@empty
-      \xdef\errormsg{#2}
-    \else
-      \xdef\errormsg{\errormsg; #2}
-    \fi
-  }
-  \makeatother
 
-  \subsubsection{Almost 180 degree turn}
-  \clearerrormsg
+\subsubsection{Almost 180 degree turn}
+\capturewarnings{
   \begin{tikzpicture}
     \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0.01);
   \end{tikzpicture}\\
-  Expect.: Warning ``Angle too sharp, expect visual errors''; finite-size output \\[.5em]
-  Actual warning: \errormsg
+  Expected: Warning ``Angle too sharp, expect visual errors''; finite-size output \\[.5em]
+  Actual warning: \capturedwarning
+}
 
-  \subsubsection{Exactly 180 degree turn}
-  \clearerrormsg
+\subsubsection{Exactly 180 degree turn}
+\capturewarnings{
   \begin{tikzpicture}
     \path[draw=purple, opacity=0.5, double distance=4.2pt, nfold] (0,0) -- (2,0) -- (0,0);
   \end{tikzpicture}\\
-  Expect.: Warning ``Angle too sharp, expect visual errors''; finite-size output \\[.5em]
-  Actual warning: \errormsg
+  Expected: Warning ``Angle too sharp, expect visual errors''; finite-size output \\[.5em]
+  Actual warning: \capturedwarning
 }
 
 \subsection{Transformed axes with relative and absolute coordinates}

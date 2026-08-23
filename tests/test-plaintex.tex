@@ -1,9 +1,24 @@
-% Compile using pdftex test-plaintex.tex
+% !TeX document-id = {9a746ac6-5531-40a9-ac0c-54c1a9725fef}
+% !TeX TXS-program:compile = txs:///plaintex
+%
+% Compile this document using `pdftex test-plaintex.tex`.
+% In order to make the override in TeXStudio work, add a custom build command "plaintex:plaintex": "pdftex %.tex"
 
 \input tikz.tex
 \usetikzlibrary{cd}
-\usetikzlibrary{nfold}
 \usetikzlibrary{intersections}
+
+% Make sure we import the libraries currently in development, not the published ones installed on the system
+
+\catcode`\@=11% \maketatletter
+% if not overwritten, these two will import the system libraries, not the ones in development
+\def\usepgflibrary#1{}
+\def\usetikzlibrary#1{}
+\input{../pgflibrarybezieroffset.code.tex}
+\input{../pgflibraryoffsetpath.code.tex}
+\input{../pgflibrarynfold.code.tex}
+\input{../tikzlibrarynfold.code.tex}
+\catcode`\@=12% \makeatother
 
 \baselineskip=12pt
 \hsize=6.3truein

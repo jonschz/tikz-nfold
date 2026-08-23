@@ -45,7 +45,7 @@
   \pgfmathsetmacro{\pgf@nfold@shiftamount}{\pgf@nfold@hwidth*\pgf@nfold@shift@fraction}
   % Transformations are already baked into the path; without this call, they would be applied twice
   \pgftransformreset%
-  \parsedpath%
+  \pgf@nfold@final@processedpath%
   \pgfsyssoftpath@flushcurrentpath%
   \pgf@up@action%
 }
@@ -70,7 +70,7 @@
     \edef\pgf@nfold@hwidth{\the\pgf@y}%
     \pgfprocessround{\pgf@nfold@cachedpath}{\pgf@nfold@cachedpath}% remove tokens from the soft path
     \pgf@nfold@parsearrows%
-    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\parsedpath}%
+    \pgf@nfold@parsesoftpath{\pgf@nfold@cachedpath}{\pgf@nfold@final@processedpath}%
     \pgf@nfold@run@loop%
   \endpgfscope%
 }
